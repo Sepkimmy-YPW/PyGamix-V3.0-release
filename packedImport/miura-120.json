@@ -1,0 +1,286 @@
+{
+    "origami": [
+        {
+            "type": "kl",
+            "tsp": [
+                0.0,
+                0.0
+            ],
+            "data": [
+                [
+                    60.0,
+                    0.0
+                ],
+                [
+                    60,
+                    -1.5707963267948966
+                ]
+            ],
+            "add_width": false
+        }
+    ],
+    "unit_bias_list": [
+        [
+            null,
+            null,
+            null,
+            null
+        ],
+        [
+            null,
+            null,
+            null,
+            null
+        ],
+        [
+            null,
+            null,
+            null,
+            null
+        ],
+        [
+            null,
+            null,
+            null,
+            null
+        ]
+    ],
+    "util": {
+        "hole_axis": [
+            [
+                [
+                    32.48705849831467,
+                    34.99402992484174
+                ],
+                0,
+                true
+            ],
+            [
+                [
+                    32.48705849831467,
+                    85.00597007515825
+                ],
+                1,
+                true
+            ],
+            [
+                [
+                    87.48706087632742,
+                    25.001991610394587
+                ],
+                2,
+                true
+            ],
+            [
+                [
+                    87.4870608763274,
+                    94.9980083896054
+                ],
+                3,
+                true
+            ]
+        ]
+    },
+    "setting": {
+        "unit_width": 120.0,
+        "copy_time": 1,
+        "entry_flag": 0,
+        "add_hole_mode": true,
+        "hole_size": 1.85,
+        "hole_resolution": 20,
+        "enable_connection": false,
+        "con_left_length": 10.0,
+        "con_right_length": 10.0,
+        "con_radius": 1.5,
+        "bias_val": 3.9
+    },
+    "line_features": [
+        {
+            "type": 2,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 2,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 0,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 1,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 1,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 2,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 2,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 1,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 2,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 2,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 2,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        },
+        {
+            "type": 2,
+            "level": 0,
+            "coeff": 1.0,
+            "recover_level": [],
+            "recover_angle": [],
+            "hard": false,
+            "hard_angle": 3.141592653589793,
+            "hard_angle_down": -3.141592653589793,
+            "thick_panel_height": 0.0
+        }
+    ],
+    "strings": {
+        "type": [],
+        "id": [],
+        "reverse": []
+    },
+    "P_candidators": {
+        "points": [
+            [
+                160.0,
+                -40.0,
+                0.0
+            ],
+            [
+                160.0,
+                160.0,
+                0.0
+            ],
+            [
+                -60.0,
+                60.0,
+                0.0
+            ]
+        ],
+        "connections": [
+            -1,
+            -1,
+            -1
+        ]
+    },
+    "contributions": [
+        [
+            0.3333333333333333,
+            0.24990049874736228,
+            0.3333333333333333,
+            0.08343283458597103
+        ],
+        [
+            0.3333333333333333,
+            0.24990049874736225,
+            0.3333333333333333,
+            0.08343283458597105
+        ],
+        [
+            0.3333333333333333,
+            0.08336652683990978,
+            0.3333333333333333,
+            0.24996680649342354
+        ],
+        [
+            0.3333333333333333,
+            0.08336652683990978,
+            0.3333333333333333,
+            0.24996680649342354
+        ]
+    ]
+}

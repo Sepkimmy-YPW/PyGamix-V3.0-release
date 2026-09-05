@@ -1,0 +1,8 @@
+taichi
+matplotlib
+dxfgrabber
+ezdxf
+PyQt5
+pyqt5-tools
+cmaes
+pandas

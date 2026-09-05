@@ -1,0 +1,16 @@
+name: pygamic
+channels:
+  - defaults
+dependencies:
+  - python=3.9.12
+  - pip=23.3.1
+  - numpy<=1.26
+  - pip:
+    - taichi
+    - matplotlib
+    - dxfgrabber
+    - ezdxf
+    - PyQt5
+    - pyqt5-tools
+    - cmaes
+    - pandas

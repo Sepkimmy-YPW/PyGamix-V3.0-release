@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# WorkBuddy agent data (local only)
+.workbuddy/
+
+# App runtime state
+imgui.ini
+
+# Generated output directories (results are written here at runtime;
+# bundled sample data under descriptionData/, packedImport/, importFile/,
+# experiment/, curve/ and setting/ are intentionally tracked)
+dxfResult/
+stlResult/
+physResult/
+threadingResult/
+cdfResult/
+pdf/
+
+# Logs
+*.log
