@@ -2,7 +2,7 @@
 
 **An integrated CAD / CAM / simulation workbench for engineering origami — with automated tendon-threading design for tendon-driven origami structures and robots.**
 
-[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/) [![GUI](https://img.shields.io/badge/GUI-PyQt5-orange)]() [![Simulator](https://img.shields.io/badge/Simulator-Taichi%20CPU-green)]() [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)]() [![License](https://img.shields.io/badge/License-MIT-yellowgreen)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/) [![GUI](https://img.shields.io/badge/GUI-PyQt5-orange)]() [![Simulator](https://img.shields.io/badge/Simulator-Taichi%20CPU-green)]() [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)]() [![License](https://img.shields.io/badge/License-MIT-yellowgreen)](LICENSE) [![Version](https://img.shields.io/badge/Version-3.0.1-blue)](CHANGELOG.md)
 
 **English** | [简体中文](README.zh-CN.md)
 
@@ -27,7 +27,7 @@ Highlights:
 ## Installation
 
 - **OS:** Windows (primary test platform). Python 3.9 is required (older Taichi/PyQt5 stack; NumPy ≤ 1.26).
-- Dependencies: `taichi` (CPU), `PyQt5`, `numpy`, `matplotlib`, `dxfgrabber`, `ezdxf`, `cmaes`, `pandas`.
+- Dependencies: `taichi` (CPU), `PyQt5`, `numpy`, `matplotlib`, `scipy`, `dxfgrabber`, `ezdxf`, `cmaes`, `pandas`.
 
 Recommended (Conda):
 
@@ -218,3 +218,9 @@ If you use PyGamiX in your research, please cite our work:
 ## License
 
 Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the full version history (current release: **v3.0.1** — bidirectional tendon-friction simulator, threading-design presets, live threading-search progress bar, and a ~340× faster STL export).

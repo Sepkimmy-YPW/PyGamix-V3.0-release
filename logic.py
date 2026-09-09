@@ -572,25 +572,25 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
                     
 
     def addTSACandidators(self):
-        content, ok = QInputDialog.getText(self, "TSA Candidators Input", "Please input the axis of TSA candidator: ")
+        content, ok = QInputDialog.getText(self, "Actuation end input (candidate)", "Please input the position of actuation end: ")
         if ok:
             ans = re.findall(r"-?\d+\.?\d*", content)
             if len(ans) != 3:
-                self.updateState("Failed to add candidator, make sure that you input x, y and z of the axis", self.state)
+                self.updateState("Failed to add actuation end, make sure that you input x, y and z of the position", self.state)
             else:
-                connection, ok = QInputDialog.getInt(self, "Candidator Connection: ", "Please select a unit for connection: ", -1, -1, len(self.units) - 1, 1)
+                connection, ok = QInputDialog.getInt(self, "Actuation end connection", "Please select a unit for connection: ", -1, -1, len(self.units) - 1, 1)
                 if ok:
                     self.P_candidate.append([float(ans[0]), float(ans[1]), float(ans[2])])
                     self.P_candidate_connection_index.append(connection)
-                    self.updateState(f"Succeed to add candidator {[float(ans[0]), float(ans[1]), float(ans[2])]} connected to {connection}", self.state)
+                    self.updateState(f"Succeed to add actuation end {[float(ans[0]), float(ans[1]), float(ans[2])]} connected to {connection}", self.state)
 
     def addTsaAPoint(self):
         if len(self.P_candidate):
-            index, ok = QInputDialog.getInt(self, "TSA Input: ", "Please input TSA A point ID: ", 0, 0, len(self.P_candidate) - 1, 1)
+            index, ok = QInputDialog.getInt(self, "Actuation end selection", "Please select an actuation end: ", 0, 0, len(self.P_candidate) - 1, 1)
             if ok:
                 self.addStringPoint(self.P_candidate[index][X], self.P_candidate[index][Y], index)
         else:
-            self.updateState(f"Please add TSA A candidators first", self.state)
+            self.updateState(f"Please select actuation ends first", self.state)
     
     def addTsaAPointWithResolutionValue(self, resolution_value):
         origami_size = [self.origami_length, self.origami_width]
@@ -621,10 +621,10 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
 
                 if self.string_type == BOTTOM:
                     self.string_type = TOP
-                    self.updateMessage("Enable passing from bottom to top. Add 2 strings, currently the type is top...")
+                    self.updateMessage("Enable passing from bottom to top. Add 2 tendons, currently the type is top...")
                 else:
                     self.string_type = BOTTOM
-                    self.updateMessage("Enable passing from top to bottom. Add 2 strings, currently the type is bottom...")
+                    self.updateMessage("Enable passing from top to bottom. Add 2 tendons, currently the type is bottom...")
 
                 self.string_start_point = end_point
             else:
@@ -642,22 +642,22 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
                 self.a_string.append(tsa_point)
 
                 if self.string_type == BOTTOM:
-                    self.updateMessage("Add 1 strings, currently the type is still bottom...")
+                    self.updateMessage("Add 1 tendon, currently the type is still bottom...")
                 else:
-                    self.updateMessage("Add 1 strings, currently the type is still top...")
+                    self.updateMessage("Add 1 tendon, currently the type is still top...")
 
                 self.string_start_point = end_point
         else:
             if reverse:
                 if self.string_type == BOTTOM:
                     self.string_type = TOP
-                    self.updateMessage("Change the z-axis of the string, currently the type is top...")
+                    self.updateMessage("Change the z-axis of the tendon, currently the type is top...")
                 else:
                     self.string_type = BOTTOM
-                    self.updateMessage("Change the z-axis of the string, currently the type is bottom...")
+                    self.updateMessage("Change the z-axis of the tendon, currently the type is bottom...")
             else:
                 self.string_start_point = [x, y, 0.0]
-                self.updateMessage("Record the start point of the string...")
+                self.updateMessage("Record the start point of the tendon...")
 
                 tsa_point = TSAPoint()
                 tsa_point.point = np.array([x, y, 0.0])
@@ -685,12 +685,13 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
             self.rotation.append(0.0)
             self.add_bias_flag.append(False)
 
-    def appendSimulationAngles(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, 
-            "Choose a description pack", 
-            ".", 
-            "Json files (*.json);;Txt files (*.txt);;All Files (*.*)"
+    def appendSimulationAngles(self, path=''):
+        if path == '':
+            path, _ = QFileDialog.getOpenFileName(
+                self, 
+                "Choose a description pack", 
+                ".", 
+                "Json files (*.json);;Txt files (*.txt);;All Files (*.*)"
         )
         if path == '':
             self.updateState("Cancel opening file", self.state)
@@ -1403,7 +1404,7 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
         self.actionCollect_Physical_Data_C.triggered.connect(self.physicalDataCollecting)
         self.actionPlot_Physical_Data.triggered.connect(self.plotJson)
         self.actionPlot_Evolution_Data.triggered.connect(self.plotEvolutionJson)
-        self.actionExplicit_Simulation_E.triggered.connect(self.physicalSimulationExplicit)
+        self.actionExplicit_Simulation_E.triggered.connect(self.physicalSimulationPD)
         self.actionExpert_Mode_E.triggered.connect(self.expertModeEnable)
         self.actionEdit_kl_E.triggered.connect(self.editKl)
         self.actionCalculate_Sequence.triggered.connect(self.calculateSequence)
@@ -4193,7 +4194,33 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
             return
 
         # --- Threading Design Automation: Settings Dialog ---
-        dialog = ThreadingDesignDialog(parent=self)
+        # Derive the default origami name from the currently loaded design
+        # file (its stem). If no design is loaded yet, leave the field empty.
+        path = self.backup_open_file_path or self.file_path
+        default_name = os.path.basename(path).split('.')[0] if path else ""
+
+        # Try to load a previously-saved preset for this origami name so the
+        # user does not have to re-enter everything from scratch.
+        preset = None
+        preset_path = ""
+        if default_name:
+            preset_path = os.path.join(
+                "./setting/threading_design", f"{default_name}.json"
+            )
+            if os.path.exists(preset_path):
+                try:
+                    with open(preset_path, 'r', encoding='utf-8') as f:
+                        preset = json.load(f)
+                    print(f"[Threading Design] Loaded preset for '{default_name}' from {preset_path}")
+                except Exception as e:
+                    print(f"[Threading Design] Failed to load preset at {preset_path}: {e}")
+                    preset = None
+
+        dialog = ThreadingDesignDialog(
+            parent=self,
+            default_name=default_name,
+            default_settings=preset,
+        )
         if dialog.exec_() == QDialog.Accepted:
             self.threading_design_settings = dialog.get_settings()
             # Print all settings to console
@@ -4203,6 +4230,20 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
             for key, value in self.threading_design_settings.items():
                 print(f"  {key}: {value}")
             print("=" * 60)
+
+            # Persist settings under the chosen origami name so the next
+            # import of the same design can reuse them.
+            try:
+                save_name = self.threading_design_settings.get("origami_name", "").strip()
+                if save_name:
+                    save_dir = "./setting/threading_design"
+                    os.makedirs(save_dir, exist_ok=True)
+                    save_path = os.path.join(save_dir, f"{save_name}.json")
+                    with open(save_path, 'w', encoding='utf-8') as f:
+                        json.dump(self.threading_design_settings, f, indent=2, ensure_ascii=False)
+                    print(f"[Threading Design] Saved preset for '{save_name}' to {save_path}")
+            except Exception as e:
+                print(f"[Threading Design] Failed to save preset: {e}")
         else:
             self.updateMessage("Threading design cancelled.")
             return
@@ -4255,6 +4296,7 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
                     f"Reusing existing system features for '{origami_name}', "
                     f"launching threading search... (Stop: Simulation → Stop Thread)"
                 )
+                self.appendSimulationAngles(path=json_path)
                 self._start_trainer(origami_name, s)
                 return
             print(f"[Step 2] Overwriting existing description file '{json_path}'...")
@@ -4312,6 +4354,7 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
             print(f"[FOLD_SIM] Exit code: {exit_code}, status: {exit_status}")
             if exit_status == QProcess.NormalExit and exit_code == 0:
                 self.updateMessage(f"System features extracted for '{origami_name}' → ./descriptionData/{origami_name}.json")
+                self.appendSimulationAngles(path=f"./descriptionData/{origami_name}.json")
                 # === Step 4: Launch trainer.py for threading design search ===
                 self._start_trainer(origami_name, s)
                 return  # trainer handles its own cleanup via on_trainer_finished
@@ -4544,6 +4587,7 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
         self.updateMessage(f"Searching threading strategies for '{origami_name}' via MCTS..."
                           " (Stop: Simulation → Stop Thread)")
 
+        self.drawProcess(0.0)
         self.threading_design_process = QProcess(self)
         self.threading_design_process.setWorkingDirectory(
             os.path.dirname(os.path.abspath(__file__))
@@ -4559,6 +4603,13 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
                 chunk = bytes(proc.readAllStandardOutput()).decode('utf-8', errors='replace')
                 if chunk:
                     print(chunk, end='', flush=True)
+                    new_string = chunk.strip()
+                    if "[TRAINER]" in new_string:
+                        self.updateMessage(new_string)
+                        if "Cut" in new_string:
+                            cut = new_string.split("Cut: ")[-1].strip().split("\r\n")[0].strip()
+                            step = new_string.split("Cut: ")[0].strip().split("Step: ")[-1].strip().split(", Best")[0].strip()
+                            self.drawProcess(max(min(float(cut) / float(step), 1), 0))
 
         def on_trainer_finished(exit_code, exit_status):
             proc = self.threading_design_process
@@ -4569,6 +4620,7 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
                 chunk = bytes(proc.readAllStandardOutput()).decode('utf-8', errors='replace')
                 if chunk:
                     print(chunk, end='', flush=True)
+                    
             print(f"[trainer] Exit code: {exit_code}, status: {exit_status}")
             if exit_status == QProcess.NormalExit and exit_code == 0:
                 self.updateMessage(f"Threading search for '{origami_name}' completed → ./threadingResult/")
@@ -4578,6 +4630,7 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
                 self.updateMessage(f"Threading search for '{origami_name}' was stopped or crashed.")
             self.threading_design_process = None
             self.enable_threading_design = False
+            self.drawProcess(1.0)
 
         self.threading_design_process.readyReadStandardOutput.connect(on_trainer_ready_read)
         self.threading_design_process.finished.connect(on_trainer_finished)
@@ -4755,8 +4808,13 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
         ori_sim.run(False, False)
         ori_sim.window.destroy()
 
-    def physicalSimulationExplicit(self):
-        pass
+    def physicalSimulationPD(self):
+        from phys_sim_pd14 import PD_Origami_Simulator as OrigamiSimulator
+        self.exportDescriptionData('./descriptionData/phys_sim.json')
+        ori_sim = OrigamiSimulator("phys_sim", use_gui=True, fast=self.pref_pack["fast_simulation_mode"])
+        ori_sim.start("phys_sim", 4)
+        ori_sim.run()
+        ori_sim.window.destroy()
 
     def plotJsonReadFile(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -7027,8 +7085,16 @@ class StlOutputThread(QThread):
                 crease_file_path = file_path.split('.')[0] + '_midlayer_C.stl'
                 if show_process:
                     self.stl_writer.s = 'solid PyGamic generated __All_Crease__ SLA File\n'
-                    tris = self.stl_writer.calculateTriPlaneForCreaseUsingBindingMethod()
-                    self._emit.emit(0.5)
+                    self.stl_writer.getSpecialListAndPillar(self.stl_writer.bias / 2.0)
+                    tris = []
+                    all_unit = []
+                    for i in range(unit_size):
+                        sub_tris, sub_unit = self.stl_writer.calculateTriPlaneForSingleCrease(self, i, 0, self.stl_writer.board_height)
+                        tris += sub_tris
+                        all_unit += sub_unit
+                        self._emit.emit(0.4 + i / unit_size * 0.18)
+                    self.stl_writer.outputCreaseDxf(all_unit)
+                    self._emit.emit(0.59)
                 else:
                     tris = self.stl_writer.calculateTriPlaneForCreaseUsingBindingMethod()
                 if show_process:
@@ -7128,8 +7194,16 @@ class StlOutputThread(QThread):
                 crease_file_path = file_path.split('.')[0] + '_midlayer_C.stl'
                 if show_process:
                     self.stl_writer.s = 'solid PyGamic generated __All_Crease__ SLA File\n'
-                    tris = self.stl_writer.calculateTriPlaneForCreaseUsingBindingMethod()
-                    self._emit.emit(0.5)
+                    self.stl_writer.getSpecialListAndPillar(self.stl_writer.bias / 2.0)
+                    tris = []
+                    all_unit = []
+                    for i in range(unit_size):
+                        sub_tris, sub_unit = self.stl_writer.calculateTriPlaneForSingleCrease(i, 0, self.stl_writer.board_height)
+                        tris += sub_tris
+                        all_unit += sub_unit
+                        self._emit.emit(0.4 + i / unit_size * 0.18)
+                    self.stl_writer.outputCreaseDxf(all_unit)
+                    self._emit.emit(0.59)
                 else:
                     tris = self.stl_writer.calculateTriPlaneForCreaseUsingBindingMethod()
                 if show_process:

@@ -36,11 +36,26 @@ DEFAULT_GRAVITY_INDEX = 0  # "0 (none)"
 class ThreadingDesignDialog(QDialog):
     """Dialog for collecting threading design automation settings."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, default_name="", default_settings=None):
+        """
+        Parameters
+        ----------
+        parent : QWidget, optional
+        default_name : str
+            Prefill text for the "Origami Name" field. Typically derived from
+            the currently imported design file's stem.
+        default_settings : dict | None
+            If provided, every key present in the dict is used to prefill the
+            corresponding widget. Keys are the same as ``get_settings()`` returns.
+            Missing keys fall back to the dialog's built-in defaults.
+        """
         super().__init__(parent)
         self.setWindowTitle("Threading Design Settings")
         self.setMinimumWidth(520)
         self._build_ui()
+        if default_name:
+            self.edit_name.setText(default_name)
+        self._apply_settings(default_settings)
 
     # ------------------------------------------------------------------ #
     #  UI construction
@@ -253,6 +268,71 @@ class ThreadingDesignDialog(QDialog):
 
         # Adjust dialog size to fit content
         self.adjustSize()
+
+    # ------------------------------------------------------------------ #
+    #  Prefill helpers
+    # ------------------------------------------------------------------ #
+
+    def _set_combo_by_data(self, combo, data):
+        """Set combo current index by itemData; no-op if data not found."""
+        for i in range(combo.count()):
+            if combo.itemData(i) == data:
+                combo.setCurrentIndex(i)
+                return
+
+    def _apply_settings(self, settings):
+        """
+        Prefill every widget from a settings dict (typically loaded from
+        ``./setting/threading_design/<origami_name>.json``).
+
+        Only keys present in ``settings`` are touched; missing keys keep the
+        dialog's built-in defaults. Conditional keys (K/L/S) are applied if
+        present even when their parent toggle is currently off — the widgets
+        are simply hidden until the user flips the toggle back on.
+        """
+        if not settings:
+            return
+        s = settings
+
+        if "origami_name" in s:
+            self.edit_name.setText(str(s["origami_name"]))
+        if "min_tendon_count" in s:
+            self.spin_min_tendon.setValue(int(s["min_tendon_count"]))
+        if "structure_height" in s:
+            self.spin_height.setValue(float(s["structure_height"]))
+        if "control_mode" in s:
+            self._set_combo_by_data(self.combo_control, s["control_mode"])
+        if "ground_enabled" in s:
+            self._set_combo_by_data(self.combo_ground, s["ground_enabled"])
+        if "gravity_flag" in s:
+            btn = self.gravity_group.button(int(s["gravity_flag"]))
+            if btn is not None:
+                btn.setChecked(True)
+        if "simulation_time" in s:
+            self.spin_sim_time.setValue(float(s["simulation_time"]))
+        if "thread_count" in s:
+            self.spin_thread.setValue(int(s["thread_count"]))
+        if "extra_tendon_length" in s:
+            self.spin_extra_len.setValue(float(s["extra_tendon_length"]))
+        if "material_type" in s:
+            self._set_combo_by_data(self.combo_material, s["material_type"])
+        if "mask_crease_type" in s:
+            self._set_combo_by_data(self.combo_mask_crease, s["mask_crease_type"])
+        if "search_mode" in s:
+            self._set_combo_by_data(self.combo_search_mode, s["search_mode"])
+        if "ea_constraint_initial_segment" in s:
+            self._set_combo_by_data(self.combo_ea_init, s["ea_constraint_initial_segment"])
+        if "ea_constraint_final_tip" in s:
+            self._set_combo_by_data(self.combo_ea_final, s["ea_constraint_final_tip"])
+        if "enable_work_criteria" in s:
+            self._set_combo_by_data(self.combo_work, s["enable_work_criteria"])
+        # Conditional fields (only present in saved dict when their toggle is on)
+        if "ground_friction" in s:
+            self.spin_friction.setValue(float(s["ground_friction"]))
+        if "controller_type" in s:
+            self._set_combo_by_data(self.combo_controller, s["controller_type"])
+        if "stroke_percent" in s:
+            self.spin_stroke.setValue(float(s["stroke_percent"]))
 
     # ------------------------------------------------------------------ #
     #  Settings retrieval

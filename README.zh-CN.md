@@ -2,7 +2,7 @@
 
 **面向工程折纸的一体化 CAD / CAM / 仿真软件平台 —— 并支持绳驱折纸结构与机器人的腱绳穿线（Threading）方案自动规划。**
 
-[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/) [![GUI](https://img.shields.io/badge/GUI-PyQt5-orange)]() [![仿真器](https://img.shields.io/badge/Simulator-Taichi%20CPU-green)]() [![平台](https://img.shields.io/badge/Platform-Windows-lightgrey)]() [![许可证](https://img.shields.io/badge/License-MIT-yellowgreen)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/) [![GUI](https://img.shields.io/badge/GUI-PyQt5-orange)]() [![仿真器](https://img.shields.io/badge/Simulator-Taichi%20CPU-green)]() [![平台](https://img.shields.io/badge/Platform-Windows-lightgrey)]() [![许可证](https://img.shields.io/badge/License-MIT-yellowgreen)](LICENSE) [![版本](https://img.shields.io/badge/Version-3.0.1-blue)](CHANGELOG.md)
 
 [English](README.md) | **简体中文**
 
@@ -27,7 +27,7 @@
 ## 安装
 
 - **操作系统：** Windows（主要测试平台）。需要 **Python 3.9**（依赖较旧的 Taichi/PyQt5 技术栈，NumPy 需 ≤ 1.26）。
-- 依赖：`taichi`（CPU）、`PyQt5`、`numpy`、`matplotlib`、`dxfgrabber`、`ezdxf`、`cmaes`、`pandas`。
+- 依赖：`taichi`（CPU）、`PyQt5`、`numpy`、`matplotlib`、`scipy`、`dxfgrabber`、`ezdxf`、`cmaes`、`pandas`。
 
 推荐方式（Conda）：
 
@@ -218,3 +218,9 @@ flowchart TD
 ## 许可证
 
 本仓库以 **MIT License** 分发，详见 [LICENSE](LICENSE)。
+
+---
+
+## 更新日志
+
+完整版本历史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v3.0.1**：新增双向腱绳摩擦仿真器、穿线设计参数预设、穿线搜索实时进度条，STL 导出提速约 340 倍。

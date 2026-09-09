@@ -131,7 +131,7 @@ class OrigamiSimulator:
             }
         
         if use_gui:
-            self.window = ti.ui.Window("Origami Simulation", (1280, 720), vsync=True)
+            self.window = ti.ui.Window("Origami Simulation", (1600, 900), vsync=True)
             self.gui = self.window.get_gui()
             self.canvas = self.window.get_canvas()
             self.canvas.set_background_color((1., 1., 1.))
@@ -640,9 +640,6 @@ class OrigamiSimulator:
             
             self.constraint_start_point = ti.Vector.field(3, dtype=data_type, shape=1)
             self.constraint_start_point_candidate_id = ti.field(dtype=int, shape=1)
-            self.equivalent_torque_index = ti.field(dtype=data_type, shape=(1, self.bending_pairs_num, self.max_control_length))
-            self.equivalent_torque_influence_id = ti.field(dtype=int, shape=(1, self.bending_pairs_num))
-            self.equivalent_torque_coeff = ti.field(dtype=data_type, shape=(1, self.bending_pairs_num, self.max_control_length))
             
             self.string_number_each = ti.field(dtype=int, shape=1)
             self.string_length_decrease = ti.field(dtype=data_type, shape=1) #当前绳子的减少长度
@@ -707,9 +704,6 @@ class OrigamiSimulator:
         
             self.constraint_start_point = ti.Vector.field(3, dtype=data_type, shape=self.constraint_number)
             self.constraint_start_point_candidate_id = ti.field(dtype=int, shape=self.constraint_number)
-            self.equivalent_torque_index = ti.field(dtype=data_type, shape=(self.constraint_number, self.bending_pairs_num, self.max_control_length))
-            self.equivalent_torque_influence_id = ti.field(dtype=int, shape=(self.constraint_number, self.bending_pairs_num))
-            self.equivalent_torque_coeff = ti.field(dtype=data_type, shape=(self.constraint_number, self.bending_pairs_num, self.max_control_length))
             
             self.string_number_each = ti.field(dtype=int, shape=self.constraint_number)
             self.string_length_decrease = ti.field(dtype=data_type, shape=self.constraint_number) #当前绳子的减少长度
@@ -763,7 +757,9 @@ class OrigamiSimulator:
             self.backup_constraint_length = ti.field(data_type, shape=self.constraint_number)
             self.points = ti.Vector.field(3, dtype=data_type, shape=1)
             self.string_force_each = ti.field(data_type, shape=self.constraint_number)
+            self.string_force_each_segment = ti.field(data_type, shape=(self.constraint_number, self.max_control_length))
             self.backup_string_force_each = ti.field(data_type, shape=self.constraint_number)
+            self.backup_string_force_each_segment = ti.field(data_type, shape=(self.constraint_number, self.max_control_length))
             self.max_force = ti.field(data_type, shape=self.constraint_number)
 
             self.error_status_buffer = ti.field(bool, shape=self.constraint_number)
@@ -2874,14 +2870,22 @@ class OrigamiSimulator:
         self.field_force.fill(0.)
         for i in ti.ndrange(self.constraint_number):
             basic_factor = 1.0
-            current_force = self.string_force_each[i]
+
+            current_force = 1e-6
+            current_basic_force = 1e-6
+
+            self.calculateStringLength(i, use_history_info=False)
+            delta_length = self.constraint_length[i] - self.constraint_initial_length[i] + self.string_length_decrease[i]
+
+            if delta_length > 0: # add force
+                current_force = self.getStringForce(delta_length, self.epsilon_string[i], i)
+                current_basic_force = current_force
+
             sum_coeff = 0.0
             initial_length = 0.0
             
             if self.equivalent_internal_point_id[i] >= 0:
                 start_point = self.calculateCenterPoint3DWithUnitId(self.unit_indices[self.equivalent_internal_point_id[i]], self.equivalent_internal_point_id[i])
-                
-                previous_force = self.backup_string_force_each[i] * self.string_force_current_discount[i, 0]
 
                 before_kp_id = self.unit_indices[self.equivalent_internal_point_id[i]]
                 kp_id = self.unit_indices[self.unit_control[i, 0]]
@@ -2928,8 +2932,16 @@ class OrigamiSimulator:
 
                 lower_bound = self.gamma_bound_180_degree[0]
                 upper_bound = self.gamma_bound_180_degree[1]
-                        
-                discount_factor = lower_bound + tm.clamp(current_force / self.maximum_tension, 0., 1.) * (upper_bound - lower_bound)       
+
+                next_force_backup = 0.0
+                if delta_length > 0:
+                    next_force_backup = self.string_force_each_segment[i, 0]
+
+                # print(f"{i}, {0}: next_force_backup: {next_force_backup}, current_force: {current_force}")    
+                larger_force = max(current_force, next_force_backup)
+
+                discount_factor = lower_bound + tm.clamp(larger_force / self.maximum_tension, 0., 1.) * (upper_bound - lower_bound)       
+
                 #后面绳与前面板夹角
                 current_angle = tm.pi * 0.5 - tm.acos(abs(tm.clamp(-force_dir.dot(before_nm) * before_direction / force_dir.norm(1e-6), -1.0, 1.0)))
                 if force_dir.norm() < self.origami_thickness:
@@ -2942,12 +2954,26 @@ class OrigamiSimulator:
                 dif = abs(current_angle - previous_angle) * 0.5 / base
                 discount_factor = discount_factor ** dif
 
-                basic_factor *= discount_factor
-                basic_factor -= self.static_friction
-                if basic_factor < 0.:
-                    basic_factor = 0.
+                # print(f"{i}, {0}: factor: {discount_factor}")
+                if current_force >= next_force_backup:
+                    current_factor = next_force_backup / (current_force)
+                    discount_factor = max(discount_factor, current_factor)
+                else:
+                    current_factor = current_force / (next_force_backup)
+                    discount_factor = max(discount_factor, current_factor)
+                # print(f"{i}, {0}: second-factor: {discount_factor}")
 
-                current_force = self.string_force_each[i] * basic_factor
+                if current_force >= next_force_backup:
+                    basic_factor *= discount_factor
+                    basic_factor -= self.static_friction
+                else:
+                    basic_factor /= discount_factor
+                    basic_factor += self.static_friction
+
+                if basic_factor < 1e-12:
+                    basic_factor = 1e-12
+
+                current_force = current_basic_force * basic_factor
                 
                 # print(f"{i}, 0")
                 start_tri_index = 0
@@ -2956,33 +2982,10 @@ class OrigamiSimulator:
                 self.calculateInitialTorque_FieldForce(current_angle, before_kp_id, start_point, force_dir - force_dir.dot(before_nm) * before_nm, -current_force * hole_direction, start_tri_index, self.unit_kp_num_list[self.equivalent_internal_point_id[i]] - 2)
 
                 final_basic_factor = basic_factor
-
-                # if self.delta_length_per_string[i, 0] >= 0:
-                # #     if previous_force > self.string_force_each[i] * basic_factor and previous_force <= self.string_force_each[i]:
-                # #         basic_factor = previous_force / self.string_force_each[i]
-                # #         current_force = self.string_force_each[i] * basic_factor
-                # #         final_basic_factor = basic_factor
-                # #     elif previous_force > self.string_force_each[i]:
-                # #         basic_factor = 1.
-                # #         current_force = self.string_force_each[i]
-                # #         final_basic_factor = 1.
-                # # else:
-                #     if previous_force > self.string_force_each[i] * basic_factor and previous_force <= self.string_force_each[i] / basic_factor:
-                #         basic_factor = previous_force / self.string_force_each[i]
-                #         current_force = self.string_force_each[i] * basic_factor
-                #         final_basic_factor = basic_factor
-                #     elif previous_force > self.string_force_each[i] / basic_factor:
-                #         basic_factor = 1. / basic_factor
-                #         current_force = self.string_force_each[i] * basic_factor
-                #         final_basic_factor = basic_factor
                 
                 self.string_force_current_discount[i, 0] = final_basic_factor
 
                 # print(i, 0, final_basic_factor)
-                
-                for j in ti.ndrange(self.bending_pairs_num):
-                    if (self.equivalent_torque_influence_id[i, j]) & 1:
-                        self.equivalent_torque_index[i, j, 1] = final_basic_factor * self.equivalent_torque_coeff[i, j, 1]
                 
                 sum_coeff += final_basic_factor
 
@@ -3007,8 +3010,6 @@ class OrigamiSimulator:
             for k in ti.ndrange(self.max_control_length):
                 if self.unit_control[i, k] != -1 and k > 0:
                     start_point = self.calculateCenterPoint3DWithUnitId(self.unit_indices[self.unit_control[i, k - 1]], self.unit_control[i, k - 1])
-
-                    previous_force = self.backup_string_force_each[i] * self.string_force_current_discount[i, k]
 
                     before_kp_id = self.unit_indices[self.unit_control[i, k - 1]]
                     kp_id = self.unit_indices[self.unit_control[i, k]]
@@ -3088,8 +3089,15 @@ class OrigamiSimulator:
                     else:
                         lower_bound = self.gamma_bound_135_degree[0] + ((angle - np.pi * 0.75) / (np.pi * 0.25)) * (self.gamma_bound_180_degree[0] - self.gamma_bound_135_degree[0])
                         upper_bound = self.gamma_bound_135_degree[1] + ((angle - np.pi * 0.75) / (np.pi * 0.25)) * (self.gamma_bound_180_degree[1] - self.gamma_bound_135_degree[1])
-                         
+
+                    next_force_backup = 0.0
+                    if self.unit_control[i, k + 1] != -1 and delta_length > 0:
+                        next_force_backup = self.string_force_each_segment[i, k + 1]    
+                    # print(f"{i}, {k}: next_force_backup: {next_force_backup}, current_force: {current_force}")        
+                    larger_force = max(current_force, next_force_backup)
+                    
                     discount_factor = lower_bound + tm.clamp(current_force / self.maximum_tension, 0., 1.) * (upper_bound - lower_bound)       
+
                     #后面绳与前面板夹角
                     current_angle = tm.pi * 0.5 - tm.acos(abs(tm.clamp(-force_dir.dot(before_nm) * before_direction / force_dir.norm(1e-6), -1.0, 1.0)))
                     if force_dir.norm() < self.origami_thickness:
@@ -3120,12 +3128,26 @@ class OrigamiSimulator:
                         dif = abs(current_angle - previous_angle) * 0.5 / base
                         discount_factor = discount_factor ** dif
 
-                    # print(avg_ratio, discount_factor)
-                    basic_factor *= discount_factor
-                    basic_factor -= self.static_friction
-                    if basic_factor < 0.:
-                        basic_factor = 0.
-                    current_force = self.string_force_each[i] * basic_factor
+                    # print(f"{i}, {k}: factor: {discount_factor}")
+                    if current_force >= next_force_backup:
+                        current_factor = next_force_backup / (current_force)
+                        discount_factor = max(discount_factor, current_factor)
+                    else:
+                        current_factor = current_force / (next_force_backup)
+                        discount_factor = max(discount_factor, current_factor)
+                    # print(f"{i}, {k}: second-factor: {discount_factor}")
+                    
+                    if current_force >= next_force_backup:
+                        basic_factor *= discount_factor
+                        basic_factor -= self.static_friction
+                    else:
+                        basic_factor /= discount_factor
+                        basic_factor += self.static_friction
+
+                    if basic_factor < 1e-12:
+                        basic_factor = 1e-12
+                        
+                    current_force = current_basic_force * basic_factor
 
                     # print(f"{i}, {k}, 2")
                     start_tri_index = 0
@@ -3134,32 +3156,9 @@ class OrigamiSimulator:
                     self.calculateInitialTorque_FieldForce(current_angle, before_kp_id, start_point, force_dir - force_dir.dot(before_nm) * before_nm, -current_force * hole_direction, start_tri_index, self.unit_kp_num_list[self.unit_control[i, k - 1]] - 2)
 
                     final_basic_factor = basic_factor
-
-                    # if self.delta_length_per_string[i, k] >= 0:
-                    # #     if previous_force > self.string_force_each[i] * basic_factor and previous_force <= self.string_force_each[i] * self.string_force_current_discount[i, k - 1]:
-                    # #         basic_factor = previous_force / self.string_force_each[i]
-                    # #         current_force = self.string_force_each[i] * basic_factor
-                    # #         final_basic_factor = basic_factor
-                    # #     elif previous_force > self.string_force_each[i] * self.string_force_current_discount[i, k - 1]:
-                    # #         basic_factor = self.string_force_current_discount[i, k - 1]
-                    # #         current_force = self.string_force_each[i] * basic_factor
-                    # #         final_basic_factor = basic_factor
-                    # # else:
-                    #     if previous_force > self.string_force_each[i] * basic_factor and previous_force <= self.string_force_each[i] * self.string_force_current_discount[i, k - 1] ** 2 / basic_factor:
-                    #         basic_factor = previous_force / self.string_force_each[i]
-                    #         current_force = self.string_force_each[i] * basic_factor
-                    #         final_basic_factor = basic_factor
-                    #     elif previous_force > self.string_force_each[i] * self.string_force_current_discount[i, k - 1] ** 2 / basic_factor:
-                    #         basic_factor = self.string_force_current_discount[i, k - 1] ** 2 / basic_factor
-                    #         current_force = self.string_force_each[i] * basic_factor
-                    #         final_basic_factor = basic_factor
                     
                     self.string_force_current_discount[i, k] = final_basic_factor
                     # print(i, k, final_basic_factor)
-                    
-                    for j in ti.ndrange(self.bending_pairs_num):
-                        if (self.equivalent_torque_influence_id[i, j] >> (k - 1)) & 1:
-                            self.equivalent_torque_index[i, j, k] = final_basic_factor * self.equivalent_torque_coeff[i, j, k]
                     
                     sum_coeff += final_basic_factor
 
@@ -3174,7 +3173,7 @@ class OrigamiSimulator:
                         for kk in ti.ndrange(self.unit_control[i, k]):
                             start_tri_index += self.unit_kp_num_list[kk] - 2
                         self.calculateInitialTorque_FieldForce(final_angle, kp_id, self.calculateCenterPoint3DWithUnitId(self.unit_indices[self.unit_control[i, k]], self.unit_control[i, k]), \
-                                                               -next_force_dir + next_force_dir.dot(nm) * nm, -current_force * hole_direction, start_tri_index, self.unit_kp_num_list[self.unit_control[i, k]] - 2)
+                                                            -next_force_dir + next_force_dir.dot(nm) * nm, -current_force * hole_direction, start_tri_index, self.unit_kp_num_list[self.unit_control[i, k]] - 2)
             # method 1
             # self.target_string_length_decrease[i, 0] = (initial_length - delta_length * basic_factor) 
             # self.string_params_bonus[i] /= basic_factor
@@ -4035,39 +4034,7 @@ class OrigamiSimulator:
 
             else:
                 equal_torque_angle = 0.0
-                # for j, k in ti.ndrange(self.constraint_number, self.max_control_length):
-                #     if self.equivalent_torque_index[j, i, k] > 0:
-                #         equivalent_arm_dis = self.h_hole + self.string_thickness
-                #         angle = abs(self.backup_crease_angle[i]) * tm.pi
-                #         if self.backup_crease_angle[i] >= 0.0:
-                #             if angle < 2. * self.beta:
-                #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(angle * 0.5) - (self.d_hole - self.string_thickness) * tm.sin(angle * 0.5)
-                #             else:
-                #                 equivalent_arm_dis = 0.0
-                #         else:
-                #             if angle < 2. * self.kappa:
-                #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(angle * 0.5) - 2. * self.panel_bias * tm.sin(angle * 0.5)
-                #             else:
-                #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(self.kappa) - 2. * self.panel_bias * tm.sin(self.kappa)
-                #         equal_torque_angle += self.equivalent_torque_index[j, i, k] * self.backup_string_force_each[j] * equivalent_arm_dis / (self.bending_k_list[i] * self.crease_initial_length[i])
-                #     elif self.equivalent_torque_index[j, i, k] < 0:
-                #         equivalent_arm_dis = self.h_hole + self.string_thickness
-                #         angle = abs(self.backup_crease_angle[i]) * tm.pi
-                #         if self.backup_crease_angle[i] <= 0.0:
-                #             if angle < 2. * self.beta:
-                #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(angle * 0.5) - (self.d_hole - self.string_thickness) * tm.sin(angle * 0.5)
-                #             else:
-                #                 equivalent_arm_dis = 0.0
-                #         else:
-                #             if angle < 2. * self.kappa:
-                #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(angle * 0.5) - 2. * self.panel_bias * tm.sin(angle * 0.5)
-                #             else:
-                #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(self.kappa) - 2. * self.panel_bias * tm.sin(self.kappa)
-                #         equal_torque_angle += self.equivalent_torque_index[j, i, k] * self.backup_string_force_each[j] * equivalent_arm_dis / (self.bending_k_list[i] * self.crease_initial_length[i])
-                        
-                # if self.crease_type[i]:
-                #     equal_torque_angle = -equal_torque_angle
-                
+
                 energy = self.getBendingEnergy(
                     self.get_position_with_index(self.crease_pairs[i, 0]), self.get_position_with_index(self.crease_pairs[i, 1]), 
                     self.get_position_with_index(self.bending_pairs[i, 0]), self.get_position_with_index(self.bending_pairs[i, 1]),
@@ -4375,40 +4342,7 @@ class OrigamiSimulator:
             related_p2 = self.bending_pairs[i, 1]
 
             equal_torque_angle = 0.0
-            # for j, k in ti.ndrange(self.constraint_number, self.max_control_length):
-            #     if self.equivalent_torque_index[j, i, k] > 0:
-            #         equivalent_arm_dis = self.h_hole + self.string_thickness
-            #         angle = abs(self.backup_crease_angle[i]) * tm.pi
-            #         if self.backup_crease_angle[i] >= 0.0:
-            #             if angle < 2. * self.beta:
-            #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(angle * 0.5) - (self.d_hole - self.string_thickness) * tm.sin(angle * 0.5)
-            #             else:
-            #                 equivalent_arm_dis = 0.0
-            #         else:
-            #             if angle < 2. * self.kappa:
-            #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(angle * 0.5) - 2. * self.panel_bias * tm.sin(angle * 0.5)
-            #             else:
-            #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(self.kappa) - 2. * self.panel_bias * tm.sin(self.kappa)
-            #         equal_torque_angle += self.equivalent_torque_index[j, i, k] * self.backup_string_force_each[j] * equivalent_arm_dis / (self.bending_k_list[i] * self.crease_initial_length[i])
-            #     elif self.equivalent_torque_index[j, i, k] < 0:
-            #         equivalent_arm_dis = self.h_hole + self.string_thickness
-            #         angle = abs(self.backup_crease_angle[i]) * tm.pi
-            #         if self.backup_crease_angle[i] <= 0.0:
-            #             if angle < 2. * self.beta:
-            #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(angle * 0.5) - (self.d_hole - self.string_thickness) * tm.sin(angle * 0.5)
-            #             else:
-            #                 equivalent_arm_dis = 0.0
-            #         else:
-            #             if angle < 2. * self.kappa:
-            #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(angle * 0.5) - 2. * self.panel_bias * tm.sin(angle * 0.5)
-            #             else:
-            #                 equivalent_arm_dis = (self.h_hole + self.string_thickness) * tm.cos(self.kappa) - 2. * self.panel_bias * tm.sin(self.kappa)
-            #         equal_torque_angle += self.equivalent_torque_index[j, i, k] * self.backup_string_force_each[j] * equivalent_arm_dis / (self.bending_k_list[i] * self.crease_initial_length[i])
-                        
-            # if self.crease_type[i]:
-            #     equal_torque_angle = -equal_torque_angle
-            # print(i, self.crease_type[i], self.crease_angle[i], self.backup_crease_angle[i], equal_torque_angle * 180.0 / tm.pi)
-     
+            
             csf, cef, rpf1, rpf2, energy, dqdx0, dqdx1, dqdx2, dqdx3, n_value, dir = self.getBendingForce(
                 self.get_position_with_index(crease_start_index), self.get_position_with_index(crease_end_index), 
                 self.get_position_with_index(related_p1), self.get_position_with_index(related_p2),
@@ -4795,7 +4729,7 @@ class OrigamiSimulator:
                                 self.string_force[kp_id[k]] += f_basic * (ref_force + friction_force) * self.unit_contributions[self.unit_control[i, j]][k]
                                 self.dldx_force[i, kp_id[k]] += f_basic * ref_bonus * self.unit_contributions[self.unit_control[i, j]][k]
                                 # self.dldx_friction_force[i, j, kp_id[k]] += f_basic
-
+                            self.string_force_each_segment[i, 0] = ref_force
                             self.outer_Q[self.exist_grad_number[0]] = end_point
                             self.outer_QI[self.exist_grad_number[0]] = end_point
                             # if self.print:
@@ -4985,6 +4919,8 @@ class OrigamiSimulator:
 
                             self.outer_Q[self.exist_grad_number[0]] = end_point
                             self.outer_QI[self.exist_grad_number[0]] = end_point
+
+                            self.string_force_each_segment[i, j] = ref_force
                         
                             # if self.print:
                             #     print(f"{i}, start: {start_point}, BEFORE QI: {self.outer_QI[self.exist_grad_number[0] - 1]}, PI: {self.outer_PI[self.exist_grad_number[0]]}, endpoint: {end_point}, intersection: {self.intersection_flag[i, 0]}, f_basic: {f_basic}, before_kp_id: {before_kp_id}, kp_id: {kp_id}")
@@ -5058,6 +4994,8 @@ class OrigamiSimulator:
                             # self.dndc[self.ddl_ddx_num[0]] = force * dndc
                             self.ddl_ddx_num[0] += 1
                             self.end_force[0] = force
+
+                            self.string_force_each_segment[i, index] = ref_force
 
                             # avg_vel = tm.vec3([.0, .0, .0])
                             # for k in range(before_kp_num):
@@ -5312,6 +5250,7 @@ class OrigamiSimulator:
                                 self.dldx_force[i, kp_id[k]] += f_basic * ref_bonus * self.unit_contributions[self.unit_control[i, j]][k]
                                 # self.dldx_friction_force[i, j, kp_id[k]] += f_basic
 
+                            self.string_force_each_segment[i, 0] = ref_force + friction_force
                             self.outer_Q[self.exist_grad_number[0]] = end_point
                             self.outer_QI[self.exist_grad_number[0]] = end_point
                             # if self.print:
@@ -5514,6 +5453,7 @@ class OrigamiSimulator:
                                 # self.hole_friction_force[kp_id[k]] -= f_basic * force * (1 - self.string_force_current_discount[i, j])
                                 # self.dldx_friction_force[i, j, kp_id[k]] += f_basic
 
+                            self.string_force_each_segment[i, j] = (force + friction_force)
                             self.outer_Q[self.exist_grad_number[0]] = end_point
                             self.outer_QI[self.exist_grad_number[0]] = end_point
                         
@@ -5605,7 +5545,8 @@ class OrigamiSimulator:
                                 self.dldx_force[i, before_kp_id[k]] += f_basic * bonus * self.unit_contributions[before_unit_id][k]
                                 # self.hole_friction_force[before_kp_id[k]] -= f_basic * force * (1 - self.string_force_current_discount[i, index])
                                 # self.dldx_friction_force[i, index, before_kp_id[k]] += f_basic
-
+                            
+                            self.string_force_each_segment[i, index] = (force + friction_force)
                             # candidate_id = self.constraint_end_point_candidate_id[i]
                             # unit_connection_id = self.constraint_start_point_candidate_connection[candidate_id]
                             # if unit_connection_id >= 0:
@@ -5628,6 +5569,9 @@ class OrigamiSimulator:
                             #     self.ddl_ddx_num[0] += 1
     
                         break
+            else:
+                for j in ti.ndrange(self.max_control_length):
+                    self.string_force_each_segment[i, j] = 0.0
                     
     @ti.kernel
     def groundForce(self, mode: int, step: int):
@@ -5884,6 +5828,8 @@ class OrigamiSimulator:
     def backup_string_force(self):
         for i in ti.ndrange(self.constraint_number):
             self.backup_string_force_each[i] = self.string_force_each[i]
+        for i, j in ti.ndrange(self.constraint_number, self.max_control_length):
+            self.backup_string_force_each_segment[i, j] = self.string_force_each_segment[i, j]
 
     @ti.kernel
     def backupGroundForce(self):
@@ -6453,6 +6399,7 @@ class OrigamiSimulator:
         self.backup_enable_equivalent_torque.fill(False)
         self.string_force_each.fill(0.)
         self.backup_string_force_each.fill(0.)
+        self.backup_string_force_each_segment.fill(0.)
         self.initial_length_per_string.fill(0.)
         self.current_length_per_string.fill(0.)
         self.backup_delta_length.fill(0.)
@@ -6606,10 +6553,6 @@ class OrigamiSimulator:
             self.crease_initial_length[i] = (ce - cs).norm()
             # 初始化随机预应力
             self.random_folding_target_angle[i] = crease_noise[i]
-            for j in ti.ndrange(self.constraint_number):
-                self.equivalent_torque_influence_id[j, i] = equivalent_torque_id[j, i]
-                for k in ti.ndrange(self.max_control_length):
-                    self.equivalent_torque_coeff[j, i, k] = equivalent_torque_index[j, i, k]
             # 初始化目标角度
             self.target_angles[i] = numpy_target_angles[i]
 
@@ -6861,16 +6804,19 @@ class OrigamiSimulator:
             for j in ti.ndrange(self.max_control_length):
                 if self.unit_control[i, j] != -1:
                     self.initial_length_per_string[i, j] = self.current_length_per_string[i, j]
+                    count += 1
                 else:
                     index = j
                     break
             if self.constraint_end_point_existence[i]:
                 self.initial_length_per_string[i, index] = self.current_length_per_string[i, index]
+                count += 1
                 # print(f"{i}, end, {length}")
             self.equal_arm_distance[0] += self.constraint_initial_length[i]
             self.backup_constraint_length[i] = self.constraint_initial_length[i]
             self.constraint_initial_length[i] *= noise[i]
         self.equal_arm_distance[0] /= (count * 2)
+        # print("Average arm distance:", self.equal_arm_distance[0], "mm")
         self.equal_arm_distance[0] = self.origami_thickness / self.equal_arm_distance[0]
 
         # # 初始化线的信息
@@ -7535,6 +7481,7 @@ class OrigamiSimulator:
                             self.initial_matrix[old_stand_point_id][current_stand_point_id] = -10
                             self.initial_matrix[current_stand_point_id][old_stand_point_id] = -10
         self.dx_list = []
+        self.gamma_list = []
     
     def calculateIntersectionWithCreases(self, P_choice, O_choice, creases):
         ids = []
@@ -8479,6 +8426,18 @@ class OrigamiSimulator:
                         self.current_t += self.dt
 
             self.dx_list.append(dx_norm)
+
+            gamma_sub_list = []
+            for i in range(self.constraint_number):
+                for j in range(self.max_control_length):
+                    if self.unit_control[i, j] != -1:
+                        gamma_sub_list.append(self.string_force_each[i] * self.string_force_current_discount[i, j])
+                    else:
+                        gamma_sub_list.append(0.0)
+                        break
+
+            self.gamma_list.append(gamma_sub_list)
+
             if self.use_gui:             
                 self.update_vertices() 
 
@@ -8824,7 +8783,8 @@ class OrigamiSimulator:
         import pandas as pd
         test = pd.DataFrame(columns=["dx"], data=self.dx_list)
         test.to_csv('./physResult/dx.csv')
-        
+        test = pd.DataFrame(data=self.gamma_list)
+        test.to_csv('./physResult/gamma.csv')
     
     def reward(self):
         """
@@ -9568,8 +9528,8 @@ if __name__ == "__main__":
     #                  "f-box2", "f-bird4", "f-robot3"]
     # ori_name_list = ["f-robot8-90"]
     
-    ori_name_list = ["f-miura-EA"]
-    output_fig = 1
+    ori_name_list = ["f-robot8-90"]
+    output_fig = 0
     fast_mode = not output_fig
 
     for idx, ori_name in enumerate(ori_name_list):
@@ -9650,13 +9610,6 @@ if __name__ == "__main__":
                                 strict=-1, friction_mode=2, const_stiff_of_crease=False, speed_bonus=1., additional_length=400.0)
             ori.start(ori_name, 4, ori.TSA_SIM)
         
-        # EA SYSTEM WITH -Z GRAVITY
-        elif "f-miura" in ori_name:
-            ori = OrigamiSimulator(origami_name=ori_name, 
-                                fast_simulation=fast_mode, g=[0., 0., -9810.], default_ground=1, control_mode=0, ground_miu=0.3, h=2., 
-                                strict=-1, friction_mode=2, const_stiff_of_crease=False, speed_bonus=1., additional_length=400.0)
-            ori.start(ori_name, 4, ori.TSA_SIM)
-            
         # EA SYSTEM WITH -Z GRAVITY
         elif "f-miura" in ori_name:
             ori = OrigamiSimulator(origami_name=ori_name, 

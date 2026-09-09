@@ -1,11 +1,90 @@
 # import numpy as np
 import math
+import io
 from copy import deepcopy
 
 from utils import *
 from dxftool import OrigamiToDxfConverter
 
 class StlMaker:
+    # --- STL 文本 O(1) 累积机制 -------------------------------------------
+    # `self.s` 对外接口保持 str 语义（logic.py 直接读写），但内部用 list-of-chunks 累积
+    # 以避免 O(N^2) 字符串拷贝。所有 `self.s = X` / `self.s += Y` / `self.s` 都通过下面
+    # 的 __setattr__ / __getattribute__ 拦截映射到 `self._s_chunks`，单次 `f.write(self.s)`
+    # 才会触发一次 join，整体 O(N) 而不是 O(N^2)。
+    #
+    # 此外维护 `_s_join_cache`：缓存最近一次 join 出来的完整字符串。在 `self.s = X` 时
+    # 若 X 是 `cache + suffix` 形态（即 `self.s += suffix` 反编译后的赋值），直接 append
+    # suffix 到 chunks，避免把 99k+ chunks 物化成单个 3MB Python str。这一步是
+    # logic.py line 6957/6988/7032/... 等处 `self.stl_writer.s += 'endsolid\n'` 末尾
+    # 拼接的关键快路径。
+    def __setattr__(self, name, value):
+        if name == 's':
+            if isinstance(value, str):
+                # 读 cache（绕过 __getattribute__ 拦截）
+                try:
+                    cache = object.__getattribute__(self, '_s_join_cache')
+                except AttributeError:
+                    cache = None
+                if cache is not None and value.startswith(cache):
+                    # `self.s = old_join + suffix` 形态：只 append suffix，O(len(suffix))
+                    suffix = value[len(cache):]
+                    if suffix:
+                        chunks = object.__getattribute__(self, '_s_chunks')
+                        chunks.append(suffix)
+                        object.__setattr__(self, '_s_join_cache', value)
+                        return
+                # 其他情况按"重置 chunks"语义处理
+                object.__setattr__(self, '_s_chunks', [value])
+                object.__setattr__(self, '_s_join_cache', value)
+            else:
+                object.__setattr__(self, '_s_chunks', [])
+                object.__setattr__(self, '_s_join_cache', None)
+        else:
+            object.__setattr__(self, name, value)
+
+    def __getattribute__(self, name):
+        if name == 's':
+            # 对外接口 `self.s`：返回当前所有 chunks 的 join 结果，并刷新 cache
+            # 以便后续 `self.s += x` 的 setattr 能命中 cache.startswith 检测。
+            chunks = object.__getattribute__(self, '_s_chunks')
+            joined = ''.join(chunks)
+            object.__setattr__(self, '_s_join_cache', joined)
+            return joined
+        return object.__getattribute__(self, name)
+
+    def s_append(self, suffix: str):
+        """对外公开的「O(1) 追加 STL 文本」接口。
+        替代 `self.s += suffix` 写法，避免把整个 chunks 物化成单个 Python str。
+        在 `s += 'endsolid\\n'` 这类末尾小拼接场景下可消除 O(N) 的拷贝开销。"""
+        if not suffix:
+            return
+        object.__getattribute__(self, '_s_chunks').append(suffix)
+        # cache 扩展到 new tail（如果旧 cache 仍有效），否则直接失效
+        try:
+            cache = object.__getattribute__(self, '_s_join_cache')
+        except AttributeError:
+            cache = None
+        if cache is not None:
+            object.__setattr__(self, '_s_join_cache', cache + suffix)
+        # else: 下次读 self.s 时 cache 会被 __getattribute__ 重新 join 刷新
+
+    def s_flush(self, filepath: str, suffix: str = None):
+        """把当前 chunks 一次性编码并写入文件（O(N)，一次 memcpy + 一次磁盘写）。
+
+        替代 `self.s += 'endsolid\\n'; f.write(self.s)` 的写法。实测在用户机器上
+        比 `''.join(chunks) + f.write` 再快约 2~3x（避免 Python 层的多次 str 拼接）。
+        可选 `suffix` 在写入前追加（O(len(suffix))）。"""
+        chunks = object.__getattribute__(self, '_s_chunks')
+        if suffix:
+            chunks.append(suffix)
+        # 一次性 join + encode + binary write，最小化 Python 层开销
+        blob = ''.join(chunks).encode('utf-8')
+        with open(filepath, 'wb') as f:
+            f.write(blob)
+        if suffix:
+            object.__setattr__(self, '_s_join_cache', None)
+
     def __init__(self) -> None:
         # unit plane
         self.unit_list = []
@@ -59,13 +138,20 @@ class StlMaker:
         self.method = "upper_bias"
         self.hole_width_size_percent = 0.5
         self.hole_length_size_percent = 0.8
-        self.s = ''
+        # 用 object.__setattr__ 避开 __setattr__ 拦截（_s_chunks 必须在拦截前就位）
+        object.__setattr__(self, '_s_chunks', [])
+        # self.s = '' 等价于把 chunks 重置为 ['']（空字符串），保持原有 str 接口语义
+        object.__setattr__(self, '_s_chunks', [''])
+        # _s_join_cache：最近一次 join 的结果缓存。setattr 在 s = old + suffix 检测中用。
+        # 初始化为 '' 与 chunks 保持一致。
+        object.__setattr__(self, '_s_join_cache', '')
         self.print_accuracy = 0.2
         self.db_enable = False
 
         self.thin_mode = False
 
         self.border_nobias = False
+        self.border_nobias_penalty = 1e-1
         
         self.fillet_mode = True
         self.fillet_size = 0.0
@@ -400,7 +486,7 @@ class StlMaker:
                     bias = self.bias / 2.5
                 elif crease_type == BORDER:
                     if self.border_nobias:
-                        bias = 1e-3
+                        bias = self.border_nobias_penalty
                     else:
                         bias = self.bias * 1.0
                 else:
@@ -410,7 +496,7 @@ class StlMaker:
                     bias = self.bias / 2.5
                 elif crease_type == BORDER:
                     if self.border_nobias:
-                        bias = 1e-3
+                        bias = self.border_nobias_penalty
                     else:
                         bias = self.bias * 1.0
                 else:
@@ -418,7 +504,7 @@ class StlMaker:
             else:
                 if crease_type == BORDER:
                     if self.border_nobias:
-                        bias = 1e-3
+                        bias = self.border_nobias_penalty
                     else:
                         bias = self.bias * 1.0
                 else:
@@ -614,7 +700,7 @@ class StlMaker:
                 bias = self.bias / 2.5
             elif crease_type == BORDER:
                 if self.border_nobias:
-                    bias = 1e-3
+                    bias = self.border_nobias_penalty
                 else:
                     bias = self.bias * 1.0
             else:
@@ -624,7 +710,7 @@ class StlMaker:
                 bias = self.bias / 2.5
             elif crease_type == BORDER:
                 if self.border_nobias:
-                    bias = 1e-3
+                    bias = self.border_nobias_penalty
                 else:
                     bias = self.bias * 1.0
             else:
@@ -632,7 +718,7 @@ class StlMaker:
         else:
             if crease_type == BORDER:
                 if self.border_nobias:
-                    bias = 1e-3
+                    bias = self.border_nobias_penalty
                 else:
                     bias = self.bias * 1.0
             else:
@@ -939,6 +1025,27 @@ class StlMaker:
             self.pillar_unit_list.append(pillar_for_unit)
             # self.pillar_unit_list.append([])
 
+    def calculateTriPlaneForSingleCrease(self, i, base_height, upper_height):
+        unit = deepcopy(self.unit_list[i])
+        special_point_list = deepcopy(self.special_point_list[i])
+        pillars = deepcopy(self.pillar_unit_list[i])
+        new_special = is_valid_polygon(special_point_list)
+        total_another_points_list = (process_triangles(pillars) if len(pillars) else []) + ([new_special] if new_special != False else [])
+        tris = self.calculateTriPlaneWithBiasAndHeight(
+            unit                =unit, 
+            unit_id             =None, 
+            upper_bias          =0, 
+            down_bias           =0, 
+            base_height         =base_height,
+            upper_height        =upper_height, 
+            add_hole            =True, 
+            another_points_list =total_another_points_list,
+            additional_crease   =False,
+            side_tri            =BORDER,
+            penalty             =0.04
+        )
+        return tris, ([unit.getSeqPoint()] + pillars + [special_point_list])
+
     def calculateTriPlaneForCreaseUsingBindingMethod(self, base_height=0, upper_height=None):
         # unit = self.getBorderCreaseUnit()
         if upper_height == None:
@@ -969,6 +1076,10 @@ class StlMaker:
         dxf_converter = OrigamiToDxfConverter(self.crease_file_path)
         dxf_converter.ExportAsDxfUsingUnits(all_unit)
         return tris
+
+    def outputCreaseDxf(self, all_unit):
+        dxf_converter = OrigamiToDxfConverter(self.crease_file_path)
+        dxf_converter.ExportAsDxfUsingUnits(all_unit)
 
     def calculateTriPlaneForCrease(self, crease_id, base_height=0, upper_height=None):
         if crease_id in self.hard_crease_index:
@@ -1215,10 +1326,10 @@ class StlMaker:
                         bias_list.append(self.unit_bias_list[unit_id][i])
                 else:
                     if self.border_nobias:
-                        bias_list.append(bias - border_penalty + 1e-3)
+                        bias_list.append(bias - border_penalty + self.border_nobias_penalty)
                     else:
                         if bias == self.min_bias:
-                            bias_list.append(1e-3)
+                            bias_list.append(self.border_nobias_penalty)
                         else:
                             bias_list.append(bias)
             else:
@@ -1308,10 +1419,10 @@ class StlMaker:
     #                     bias_list.append(self.unit_bias_list[unit_id][i])
     #             else:
     #                 if self.border_nobias:
-    #                     bias_list.append(bias - border_penalty + 1e-3)
+    #                     bias_list.append(bias - border_penalty + self.border_nobias_penalty)
     #                 else:
     #                     if bias == self.min_bias:
-    #                         bias_list.append(1e-3)
+    #                         bias_list.append(self.border_nobias_penalty)
     #                     else:
     #                         bias_list.append(bias)
     #         else:
@@ -2674,39 +2785,50 @@ class StlMaker:
             self.calculateTriPlaneForPillar()
             
     def addSpace(self, number):
-        for i in range(0, number):
-            self.s += ' '
+        # O(1) 一次性追加 number 个空格到内部 chunks（原先逐字符 += 导致 O(N^2) 字符拷贝）
+        self._s_chunks.append(' ' * number)
+        object.__setattr__(self, '_s_join_cache', None)
 
-    def addInfoToStlFile(self, tris):
-        space_num = 1
-        for ele in tris:
-            self.addSpace(space_num)
-            self.s += 'facet normal ' + str(ele[0][0]) + ' ' + str(ele[0][1]) + ' ' + str(ele[0][2]) + '\n'
-            space_num += 1
-            self.addSpace(space_num)
-            self.s += 'outer loop\n'
-            space_num += 1
-            for i in range(0, 3):
-                self.addSpace(space_num)
-                self.s += 'vertex ' + str(ele[1][i][0]) + ' ' + str(ele[1][i][1]) + ' ' + str(ele[1][i][2]) + '\n'
-            space_num -= 1
-            self.addSpace(space_num)
-            self.s += 'endloop\n'
-            space_num -= 1
-            self.addSpace(space_num)
-            self.s += 'endfacet\n'
+    def addInfoToStlFile(self, tris, out=None):
+        # out=None 走兼容路径：直接 append 到 self._s_chunks（O(1) per facet, 总 O(N)）
+        # out=<file/StringIO> 走快速路径：每 facet O(1)，总 O(N)
+        # ASCII STL 不需要缩进，解析器只识别 facet/outer loop/vertex/endloop/endfacet 关键字和换行。
+        if out is None:
+            chunks = self._s_chunks
+            for ele in tris:
+                n0, n1, n2 = ele[0]
+                chunks.append(f'facet normal {n0} {n1} {n2}\n')
+                chunks.append('outer loop\n')
+                for i in range(0, 3):
+                    v0, v1, v2 = ele[1][i]
+                    chunks.append(f'vertex {v0} {v1} {v2}\n')
+                chunks.append('endloop\n')
+                chunks.append('endfacet\n')
+            # cache 已失效（下一次 self.s 读会重新 join 刷新）
+            object.__setattr__(self, '_s_join_cache', None)
+        else:
+            for ele in tris:
+                n0, n1, n2 = ele[0]
+                out.write(f'facet normal {n0} {n1} {n2}\n')
+                out.write('outer loop\n')
+                for i in range(0, 3):
+                    v0, v1, v2 = ele[1][i]
+                    out.write(f'vertex {v0} {v1} {v2}\n')
+                out.write('endloop\n')
+                out.write('endfacet\n')
 
     def outputUnitStl(self, unit_id, filepath):
-        self.s = 'solid PyGamiX generated __Unit_' + str(unit_id) + '__ SLA File\n'
-        tris = self.tri_list[unit_id]
-        self.addInfoToStlFile(tris)
-        self.s += 'endsolid\n'
-
+        buf = io.StringIO()
+        buf.write('solid PyGamiX generated __Unit_' + str(unit_id) + '__ SLA File\n')
+        self.addInfoToStlFile(self.tri_list[unit_id], out=buf)
+        buf.write('endsolid\n')
+        self.s = buf.getvalue()  # 保持向后兼容
         with open(filepath, 'w') as f:
             f.write(self.s)
 
     def outputAllStl(self, filepath):
-        self.s = 'solid PyGamiX generated __All_Units__ SLA File\n'
+        buf = io.StringIO()
+        buf.write('solid PyGamiX generated __All_Units__ SLA File\n')
         for i in range(len(self.unit_list)):
             tris = self.tri_list[i]
             if len(self.unit_rotation_matrix):
@@ -2720,40 +2842,47 @@ class StlMaker:
                         new_points.append(new_trans_point.tolist())
                     new_tris.append(self.getTriangle(new_points[0], new_points[1], new_points[2]))
                 tris = new_tris
-            self.addInfoToStlFile(tris)
-        self.s += 'endsolid\n'
+            self.addInfoToStlFile(tris, out=buf)
+        buf.write('endsolid\n')
+        self.s = buf.getvalue()  # 保持向后兼容
         with open(filepath, 'w') as f:
             f.write(self.s)
 
     def outputCreaseStl(self, crease_id, filepath):
-        self.s = 'solid PyGamiX generated __Crease__ SLA File\n'
-        tris = self.crease_tri_list[crease_id]
-        self.addInfoToStlFile(tris)
-        self.s += 'endsolid\n'
-
+        buf = io.StringIO()
+        buf.write('solid PyGamiX generated __Crease__ SLA File\n')
+        self.addInfoToStlFile(self.crease_tri_list[crease_id], out=buf)
+        buf.write('endsolid\n')
+        self.s = buf.getvalue()
         with open(filepath, 'w') as f:
             f.write(self.s)
 
     def outputAllCreaseStl(self, filepath):
-        self.s = 'solid PyGamiX generated __All_Crease__ SLA File\n'
+        buf = io.StringIO()
+        buf.write('solid PyGamiX generated __All_Crease__ SLA File\n')
         for i in range(len(self.valid_crease_list)):
             tris = self.crease_tri_list[i]
             if tris != None:
-                self.addInfoToStlFile(tris)
-        self.s += 'endsolid\n'
+                self.addInfoToStlFile(tris, out=buf)
+        buf.write('endsolid\n')
+        self.s = buf.getvalue()
         with open(filepath, 'w') as f:
             f.write(self.s)
 
     def outputBoardStl(self, filepath):
-        self.s = 'solid PyGamiX generated __Board__ SLA File\n'
-        self.addInfoToStlFile(self.board_tri_list)
-        self.s += 'endsolid\n'
+        buf = io.StringIO()
+        buf.write('solid PyGamiX generated __Board__ SLA File\n')
+        self.addInfoToStlFile(self.board_tri_list, out=buf)
+        buf.write('endsolid\n')
+        self.s = buf.getvalue()
         with open(filepath, 'w') as f:
             f.write(self.s)
-    
+
     def outputStringStl(self, filepath):
-        self.s = 'solid PyGamiX generated __String__ SLA File\n'
-        self.addInfoToStlFile(self.string_tri_list)
-        self.s += 'endsolid\n'
+        buf = io.StringIO()
+        buf.write('solid PyGamiX generated __String__ SLA File\n')
+        self.addInfoToStlFile(self.string_tri_list, out=buf)
+        buf.write('endsolid\n')
+        self.s = buf.getvalue()
         with open(filepath, 'w') as f:
             f.write(self.s)

@@ -41,7 +41,7 @@ CREASE_CROSS = 2
 
 ####################################
 # origami name
-origami = "robot14"
+origami = "miura-EA"
 # string number
 string_number = 2
 # enable/disable masking the types of creases
@@ -55,13 +55,13 @@ reward_coeff = [0.2, 0.0, 0.2] # maximal speed, minimal actuator num, minimal ac
 # weight
 reward_weight = [1.0, 0.0, 0.0]
 # EA constraint
-ea_constraint_initial_segment = False
+ea_constraint_initial_segment = True
 ea_constraint_final_tip = True
 # enable work criteria
 enable_work_criteria = True
 #####################################
 
-search_mode = 0  # 0=regular, 1=fast
+search_mode = 1  # 0=regular, 1=fast
 sim_override = {}  # CLI overrides for simulation_config
 
 ROLLOUT_NUM = lambda x, y: y * y if search_mode else x * y
@@ -371,6 +371,24 @@ class Env:
                 "stroke_percent": 0.75
             }
         elif "bird" in origami:
+            self.simulation_config = {
+                "platform_height": 2.,
+                "gravity_flag": 6,
+                "extract_mode": -1,
+                "prefold": 0.0,
+                "miu": 0.3,
+                "control_mode": 0,
+                "friction_mode": 2,
+                "speed_bonus": 1.0,
+                "ground_enable": 1,
+                "control_mode_training_time": 15.0,
+                "simulation_upper_time": 20.0,
+                "additional_length_of_string": 400.0,
+                "robot_type": 0,
+                "type_of_controller": 1,
+                "stroke_percent": 0.75
+            }
+        elif "miura-EA" in origami:
             self.simulation_config = {
                 "platform_height": 2.,
                 "gravity_flag": 6,
@@ -2299,7 +2317,7 @@ class Env:
                                                     "rforce": rforce,
                                                     "rforce2": rforce2
                                                 })
-                                                print(id)
+                                                # print(id)
                                             break
                                 
                                 # if direct_reward > 1.:
@@ -2318,7 +2336,7 @@ class Env:
         if len(valid_methods):
             # 进行有效方法的处理
             simulated_number += len(valid_methods)
-            print(str(len(valid_methods)) + ' / ' + str(len(methods)) + " cases need to be simulated.")
+            print("[TRAINER] " + str(len(valid_methods)) + ' / ' + str(len(methods)) + " cases need to be simulated.")
             # print(valid_buf_id_list)
             if calculate_number:
                 for i in range(len(valid_id_list)):
@@ -2965,7 +2983,7 @@ def outputAllMethod(time):
                         "time": (datetime.now() - start_time).total_seconds()
                     }, f, indent=4)
                 buf += added_buffer
-        print(f"{len(candidate_methods)} methods become candidators")
+        print(f"[TRAINER] {len(candidate_methods)} methods become candidators")
     except:
         pass
     
@@ -2983,7 +3001,7 @@ def outputBestTrajectory(env, best_trajectory, best_reward):
                     "method": sorted_method,
                     "number": len(sorted_method)
                 }, f, indent=4)
-        print(f"{len(candidate_methods)} methods become candidators")
+        print(f"[TRAINER] {len(candidate_methods)} methods become candidators")
     except:
         pass
 
@@ -3263,18 +3281,18 @@ def train(env: Env, origami):
                         log_dict["number"][-1].append(method_num)
                         log_dict["simulated_number"][-1].append(simulated_num)
                         log_dict["time"][-1].append((datetime.now() - start_time).total_seconds())
-                        print(f"Root node ends, total step: {step}, cut number: {cut_num}, valid number: {valid_method_num} / {method_num}")
+                        print(f"[TRAINER] Root node ends, total step: {step}, cut number: {cut_num}, valid number: {valid_method_num} / {method_num}")
 
                         try:
                             env.output(step, best_trajectory, best_reward)
-                            print(best_trajectory)
+                            # print(best_trajectory)
                         except:
                             pass
                         outputAllMethod(time)
                         return log_dict
                     
                     if current_node.done or (current_node.fullyExpanded() and not current_node.existBestChild((env.best_reward+1.)*0.5)):
-                        print(f"Trial {trial} ends, Step: {step}, Cut: {cut_num}, V / RV / T: {valid_method_num} / {rollout_valid_method_num} / {method_num}")
+                        print(f"[TRAINER] Episode {trial} ends, Step: {step}, V / RV / T: {valid_method_num} / {rollout_valid_method_num} / {method_num}")
                         if best_reward <= previous_best and previous_best > base_reward:
                             epsilon_bonus += 1
                             dead_count += 1
@@ -3300,18 +3318,18 @@ def train(env: Env, origami):
                         log_dict["number"][-1].append(method_num)
                         log_dict["simulated_number"][-1].append(simulated_num)
                         log_dict["time"][-1].append((datetime.now() - start_time).total_seconds())
-                        print(f"Root node ends, Step: {step}, Cut: {cut_num}, Valid / Total: {valid_method_num} / {method_num}")
+                        print(f"[TRAINER] Root node ends, Step: {step}, Cut: {cut_num}, Valid / Total: {valid_method_num} / {method_num}")
                         env.outputGraphAndCSV(log_dict)
                         try:
                             env.output(step, best_trajectory, best_reward)
-                            print(best_trajectory)
+                            # print(best_trajectory)
                         except:
                             pass
                         outputAllMethod(time)
                         return log_dict
                     
                     if front_node.children == None or (front_node.fullyExpanded() and not front_node.existBestChild((env.best_reward+1.)*0.5)):
-                        print(f"Trial {trial} ends, Step: {step}, Cut: {cut_num}, V / RV / T: {valid_method_num} / {rollout_valid_method_num} / {method_num}")
+                        print(f"[TRAINER] Episode {trial} ends, Step: {step}, V / RV / T: {valid_method_num} / {rollout_valid_method_num} / {method_num}")
                         if best_reward <= previous_best and previous_best > base_reward:
                             epsilon_bonus += 1
                             dead_count += 1
@@ -3579,11 +3597,11 @@ def train(env: Env, origami):
                         if new_best:
                             try:
                                 env.output(step, best_trajectory, best_reward)
-                                if not calculate_number:
-                                    print(best_trajectory)
+                                # if not calculate_number:
+                                #     print(best_trajectory)
                             except:
                                 pass
-                        print(f"Step: {step}, Best: {round(env.valid_best_reward, 2)} / {round(best_reward, 2)}, Dead count: {dead_count} / {dead_maximum}, Level: {level}")
+                        print(f"[TRAINER] Step: {step}, Best (Tree / All): {round(env.valid_best_reward, 2)} / {round(best_reward, 2)}, Early stop count: {dead_count} / {dead_maximum}, Search level: {level}, Cut: {cut_num}")
 
                     if (step % record_episode == 0) or new_best or output_result: 
                         env.outputGraphAndCSV(log_dict)
@@ -3640,7 +3658,6 @@ def workerMultisim(mlist, origami,
     elif gravity_flag == 6:
         standard_g = [0., 0., -9810.]
 
-    print(stroke_percent)
     if len(methods):
         ori_sim = OrigamiSimulator(use_gui=0, fast_simulation=1, origami_name=origami, g=standard_g, strict=extract, h=height, ground_miu=miu,
                                 control_mode=ctm, friction_mode=fm, speed_bonus=speed_bonus, check_connection_matrix=False, const_stiff_of_crease=False,
@@ -3682,7 +3699,7 @@ def workerMultisim(mlist, origami,
             mlist[lower + index + valid_number * 7] = rforce
             mlist[lower + index + valid_number * 8] = rforce2
             
-            print("No. " + str(ori_sim.ID) + ", Value: " + str(round(value, 3)))
+            print("[TRAINER] " + "Simulated case No. " + str(ori_sim.ID) + ", Value: " + str(round(value, 3)))
         
         gc.collect()
 
