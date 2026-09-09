@@ -29,13 +29,21 @@ imgui.ini
 
 # Generated output directories (results are written here at runtime;
 # bundled sample data under descriptionData/, packedImport/, importFile/,
-# experiment/, curve/ and setting/ are intentionally tracked)
-dxfResult/
-stlResult/
-physResult/
-threadingResult/
-cdfResult/
-pdf/
+# experiment/, curve/, legacy/ and setting/ are intentionally tracked).
+# The folders themselves are kept in git via .gitkeep placeholders so a
+# fresh clone has them ready — the code writes results directly into them.
+dxfResult/*
+!dxfResult/.gitkeep
+stlResult/*
+!stlResult/.gitkeep
+physResult/*
+!physResult/.gitkeep
+threadingResult/*
+!threadingResult/.gitkeep
+cdfResult/*
+!cdfResult/.gitkeep
+pdf/*
+!pdf/.gitkeep
 
 # Logs
 *.log

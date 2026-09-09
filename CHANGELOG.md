@@ -68,6 +68,8 @@ All notable changes to PyGamiX are documented in this file.
 
 - Fixed the quick-start guide: **File ▸ Open file...** opens packed-data design files (`packedImport/*.json`) only — `descriptionData/` holds simulator system-description files that cannot be opened there.
 - 修正快速开始指引：**File ▸ Open file...** 只能打开 packed-data 设计文件（`packedImport/*.json`）—— `descriptionData/` 下是仿真器系统描述文件，不能通过该入口打开。
+- Runtime output directories (`cdfResult/`, `dxfResult/`, `legacy/`, `pdf/`, `physResult/`, `stlResult/`, `threadingResult/`) are now shipped via `.gitkeep` placeholders so a fresh clone has them ready (code writes results directly into them); their runtime contents remain git-ignored.
+- 运行时输出目录（`cdfResult/`、`dxfResult/`、`legacy/`、`pdf/`、`physResult/`、`stlResult/`、`threadingResult/`）通过 `.gitkeep` 占位文件随仓库分发，fresh clone 后即可直接使用（代码会直接向其中写入结果）；运行期生成的内容仍被 git 忽略。
 
 ---
 
