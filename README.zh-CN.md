@@ -50,6 +50,11 @@ python main.py
 1. 启动软件：`python main.py`
 2. 试用内置示例：**File ▸ Open file...** 选择 packed-data 格式的设计文件，如 `packedImport/miura-120.json`（任意 `packedImport/*.json` 均可；注意 `descriptionData/` 下是仿真器系统描述文件，不能在此处打开），然后点击 **Design** 按钮。
 3. 或导入自己的折痕图：**File ▸ Import dxf** → 预览加载完成后点击 **Design**。
+4. **保存设计、下次继续：** 设计完成后，使用 **File ▸ Save result...**（或快捷键 **Ctrl+S**）可将当前*完整*设计——全部折纸模块、单元 bias、孔位/折痕设置、腱绳穿线路径、连接候选、折痕角——打包保存为一个 packed-data JSON 文件。下次通过 **File ▸ Open file...** 打开即可在原进度上继续编辑，无需重新导入 DXF/KL 文件、重复所有编辑操作。建议把自己的设计存放在 `packedImport/` 目录（与内置示例放在一起），便于管理。
+
+> **保存与恢复工作流**
+>
+> `File ▸ Save result...` / `Ctrl+S` → packed-data JSON（如 `packedImport/your-design.json`）→ `File ▸ Open file...` → 继续编辑。若当前设计是从文件打开的，保存时会直接写回原文件（不弹对话框）。
 
 > **图片占位 1 —— 软件主界面与编辑示例**
 >
@@ -166,6 +171,8 @@ flowchart TD
 
 ## 仿真与数据格式
 
+**Packed-data JSON**（设计存档文件 —— 由 **File ▸ Save result...** / `Ctrl+S` 写出，由 **File ▸ Open file...** 读回）：一份设计的完整可恢复状态 —— 每个折纸模块（含来源类型：KL / DXF / lean-Miura）、单元 bias 列表、孔轴线与孔位设置、面板连接、全部折痕 `line_features`、腱绳路径（`strings`）、驱动端候选（`P_candidators`）、固定面板与折痕角。重新打开即可在上次进度上继续，迭代设计无需每次从 DXF/KL 导入重来。
+
 **系统描述 JSON**（通过 *As Full-description Data...* 导出，供仿真器与穿线搜索读取）主要字段：
 
 | 字段 | 含义 |
@@ -181,7 +188,7 @@ flowchart TD
 | 路径 | 内容 |
 | --- | --- |
 | `descriptionData/` | 系统描述 JSON（工作文件与内置示例） |
-| `importFile/`、`packedImport/` | KL 模块导入样例 / 完整设计示例（Miura、Waterbomb、机械臂、盒体等） |
+| `importFile/`、`packedImport/` | KL 模块导入样例 / packed-data 设计文件 —— 内置示例（Miura、Waterbomb、机械臂、盒体等），**也是你自己 `Save result...` 存档的推荐存放处** |
 | `threadingResult/` | 穿线搜索结果（运行时生成）：排序候选方案、训练曲线（PNG/CSV） |
 | `dxfResult/`、`stlResult/` | 导出文件输出目录 |
 | `experiment/` | 实物实验记录数据（CSV/TRK），用于仿真-实物对比绘图 |

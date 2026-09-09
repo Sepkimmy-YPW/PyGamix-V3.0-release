@@ -50,6 +50,11 @@ Alternative (existing environment): `pip install -r requirement.txt` — **not**
 1. Launch the app: `python main.py`
 2. Try a bundled example: **File ▸ Open file...** and choose a packed-data design file, e.g. `packedImport/miura-120.json` (any `packedImport/*.json` works; note that files in `descriptionData/` are simulator system-description files and cannot be opened here), then press the **Design** button.
 3. Or bring your own crease pattern: **File ▸ Import dxf** → click **Design** once the preview is loaded.
+4. **Save your design and resume later:** once you are happy with a design, use **File ▸ Save result...** (or press **Ctrl+S**) to pack the *entire* current design — all origami modules, unit biases, hole/crease settings, tendon routing, connection candidates, crease angles — into a single packed-data JSON file. Reload it anytime with **File ▸ Open file...** to continue right where you left off, instead of re-importing a DXF/KL file and repeating every edit. Tip: store your own designs in `packedImport/` next to the bundled examples to keep them organized.
+
+> **Save & resume workflow 保存并恢复工作流**
+>
+> `File ▸ Save result...` / `Ctrl+S` → packed-data JSON (`packedImport/your-design.json`) → `File ▸ Open file...` → continue editing. Designs opened from a file are saved back to the same file silently.
 
 > **FIGURE SLOT 1 — Main interface & editing example**
 >
@@ -166,6 +171,8 @@ Search-algorithm properties:
 
 ## Simulation & data formats
 
+**Packed-data JSON** (design save files — write with **File ▸ Save result...** / `Ctrl+S`, read back with **File ▸ Open file...**): the complete, resumable state of a design — every origami module (with its source type: KL / DXF / lean-Miura), unit bias list, hole axis & hole settings, panel connections, all crease `line_features`, tendon routing (`strings`), actuation-end candidates (`P_candidators`), fixed panels and crease angles. Reopening such a file restores the design exactly where you left it, so iterative design sessions never have to start over from a DXF/KL import.
+
 The **system description JSON** (exported via *As Full-description Data...*, consumed by the simulator and the threading search) contains:
 
 | Field | Meaning |
@@ -181,7 +188,7 @@ Key directories (relative to the repo root):
 | Path | Content |
 | --- | --- |
 | `descriptionData/` | System-description JSONs (working files & bundled examples) |
-| `importFile/`, `packedImport/` | KL-module import samples / complete design examples (Miura, waterbomb, robot arms, boxes…) |
+| `importFile/`, `packedImport/` | KL-module import samples / packed-data design files — bundled examples (Miura, waterbomb, robot arms, boxes…) **and where your own `Save result...` designs can live** |
 | `threadingResult/` | Threading-search output (created at run time): ranked candidates, training curves (PNG/CSV) |
 | `dxfResult/`, `stlResult/` | Export outputs |
 | `experiment/` | Recorded experiment data (CSV/TRK) used for sim-to-real plotting |

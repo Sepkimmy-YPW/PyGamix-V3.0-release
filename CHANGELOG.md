@@ -70,6 +70,8 @@ All notable changes to PyGamiX are documented in this file.
 - 修正快速开始指引：**File ▸ Open file...** 只能打开 packed-data 设计文件（`packedImport/*.json`）—— `descriptionData/` 下是仿真器系统描述文件，不能通过该入口打开。
 - Runtime output directories (`cdfResult/`, `dxfResult/`, `legacy/`, `pdf/`, `physResult/`, `stlResult/`, `threadingResult/`) are now shipped via `.gitkeep` placeholders so a fresh clone has them ready (code writes results directly into them); their runtime contents remain git-ignored.
 - 运行时输出目录（`cdfResult/`、`dxfResult/`、`legacy/`、`pdf/`、`physResult/`、`stlResult/`、`threadingResult/`）通过 `.gitkeep` 占位文件随仓库分发，fresh clone 后即可直接使用（代码会直接向其中写入结果）；运行期生成的内容仍被 git 忽略。
+- Documented the save-and-resume workflow: **File ▸ Save result...** (`Ctrl+S`) packs the entire current design into a packed-data JSON that **File ▸ Open file...** reopens directly, so users no longer have to restart from a DXF/KL import every session. Added to Quick start (step 4), the data-formats section, and the directory table of both READMEs.
+- 补充「保存并恢复设计」工作流文档：**File ▸ Save result...**（`Ctrl+S`）可将当前完整设计打包为 packed-data JSON，之后用 **File ▸ Open file...** 直接打开继续编辑，用户无需每次会话都从 DXF/KL 导入重新开始。已写入两份 README 的快速开始（第 4 步）、数据格式章节与目录表。
 
 ---
 
