@@ -64,6 +64,11 @@ All notable changes to PyGamiX are documented in this file.
 - Added `scipy` to `environment.yml` and `requirement.txt` (used by `logic.py` for interpolation and Gaussian smoothing of experiment data).
 - 新增依赖 `scipy`（`logic.py` 用于实验数据的插值与高斯平滑）。
 
+### Documentation / 文档
+
+- Fixed the quick-start guide: **File ▸ Open file...** opens packed-data design files (`packedImport/*.json`) only — `descriptionData/` holds simulator system-description files that cannot be opened there.
+- 修正快速开始指引：**File ▸ Open file...** 只能打开 packed-data 设计文件（`packedImport/*.json`）—— `descriptionData/` 下是仿真器系统描述文件，不能通过该入口打开。
+
 ---
 
 ## [3.0.0] — 2026-09 (initial release / 首次发布)

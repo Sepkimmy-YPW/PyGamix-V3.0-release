@@ -48,7 +48,7 @@ python main.py
 ## 快速开始
 
 1. 启动软件：`python main.py`
-2. 试用内置示例：**File ▸ Open file...** 选择如 `packedImport/miura-120.json`（或任意 `descriptionData/*.json`），然后点击 **Design** 按钮。
+2. 试用内置示例：**File ▸ Open file...** 选择 packed-data 格式的设计文件，如 `packedImport/miura-120.json`（任意 `packedImport/*.json` 均可；注意 `descriptionData/` 下是仿真器系统描述文件，不能在此处打开），然后点击 **Design** 按钮。
 3. 或导入自己的折痕图：**File ▸ Import dxf** → 预览加载完成后点击 **Design**。
 
 > **图片占位 1 —— 软件主界面与编辑示例**

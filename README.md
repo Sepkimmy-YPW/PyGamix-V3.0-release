@@ -48,7 +48,7 @@ Alternative (existing environment): `pip install -r requirement.txt` — **not**
 ## Quick start
 
 1. Launch the app: `python main.py`
-2. Try a bundled example: **File ▸ Open file...** and choose e.g. `packedImport/miura-120.json` (or any `descriptionData/*.json`), then press the **Design** button.
+2. Try a bundled example: **File ▸ Open file...** and choose a packed-data design file, e.g. `packedImport/miura-120.json` (any `packedImport/*.json` works; note that files in `descriptionData/` are simulator system-description files and cannot be opened here), then press the **Design** button.
 3. Or bring your own crease pattern: **File ▸ Import dxf** → click **Design** once the preview is loaded.
 
 > **FIGURE SLOT 1 — Main interface & editing example**
