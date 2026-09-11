@@ -8,6 +8,14 @@
 
 📦 This is the open-source release accompanying the paper [*Design and Fabrication of String-driven Origami Robots* (ICRA 2024)](https://arxiv.org/abs/2404.09222).
 
+<p align="center">
+  <img src="docs/images/sim_miura_folding.gif" width="47%" alt="PyGamiX simulation of a tendon-driven origami sheet folding">
+  &nbsp;&nbsp;
+  <img src="docs/images/sim_actuator_folding.gif" width="47%" alt="PyGamiX simulation of a multi-tendon origami actuator folding on the ground">
+</p>
+
+<p align="center"><em>Tendon-driven folding simulated in the built-in Taichi simulator — the tendon (string) routing, the folding motion and the live tension / tendon-length readout are all produced by PyGamiX, no hardware required.</em></p>
+
 ---
 
 ## Why PyGamiX?
@@ -56,13 +64,13 @@ Alternative (existing environment): `pip install -r requirement.txt` — **not**
 >
 > `File ▸ Save result...` / `Ctrl+S` → packed-data JSON (`packedImport/your-design.json`) → `File ▸ Open file...` → continue editing. Designs opened from a file are saved back to the same file silently.
 
-> **FIGURE SLOT 1 — Main interface & editing example**
->
-> <!-- FIGURE-1: replace with docs/images/gui_overview.png -->
->
-> **Purpose:** give readers an immediate impression of the GUI — the crease pattern displayed in the central drawing area, the right-side parameter panel with the **Design** / **Threading Design** buttons, and a design with holes/creases selected. An annotated screenshot showing a real design (e.g. a waterbomb/Miura panel with added holes) works best.
->
-> Suggested path: `docs/images/gui_overview.png` (width ≈ 1280 px).
+**Figure 1 — Main interface.**
+
+<p align="center">
+  <img src="docs/images/gui_overview.png" width="85%" alt="PyGamiX main window: crease pattern, parameter panel, Design and Threading Design buttons">
+</p>
+
+<p align="center"><em>The main window: the crease pattern (with holes and creases drawn) in the central canvas, the parameter panel on the right (unit width, density, hole mode, panel offset), and the <b>Design</b> / <b>Threading Design</b> actions in the bottom-right corner.</em></p>
 
 ---
 
@@ -129,11 +137,13 @@ flowchart TD
 7. **Evaluate in simulation** — **Tool ▸ Physical Simulation...** runs the built-in simulator on the current design (interactive GGUI view). Track the achieved folding percentage/error, actuation force and the driving signals (tendon length reduction vs. time).
 8. **Manufacture & deploy** — export the drawings/models (DXF / STL), fabricate the structure, install the tendons following the planned strategy, and run the physical prototype. Use **Tool ▸ Plot Physical Data** (or Plot Simulation Data / Plot Evolution Data) to compare recorded experiment data with simulation for calibration.
 
-> **FIGURE SLOT 2 — Threading Design settings dialog**
->
-> <!-- FIGURE-2: replace with docs/images/threading_dialog.png -->
->
-> **Purpose:** a screenshot of the `Threading Design` settings dialog so readers can map every parameter in the table below to the actual widget. If space allows, a second screenshot of the tendon routing drawn over the crease pattern (result of Step 5) is very helpful.
+**Figure 2 — Threading Design settings dialog.**
+
+<p align="center">
+  <img src="docs/images/threading_dialog.png" width="55%" alt="Threading Design Settings dialog with design info, simulation properties and search algorithm properties">
+</p>
+
+<p align="center"><em>The <b>Threading Design Settings</b> dialog — design info (origami name), simulation properties (structure height, control mode, ground/friction/gravity, simulation time, extra tendon length, material type) and search-algorithm properties (min tendon count, thread count, mask crease type, search mode, EA constraints, work criteria). Every field is documented in the table below; the settings are saved per origami name and pre-filled on the next run.</em></p>
 
 ### Threading Design dialog — parameters
 
@@ -193,12 +203,15 @@ Key directories (relative to the repo root):
 | `dxfResult/`, `stlResult/` | Export outputs |
 | `experiment/` | Recorded experiment data (CSV/TRK) used for sim-to-real plotting |
 | `curve/` | Example 3D trajectory/curve samples for the View menu |
+| `docs/images/` | Screenshots, comparison figures and demo GIFs used by this README |
 
-> **FIGURE SLOT 3 — Simulation & real-hardware verification**
->
-> <!-- FIGURE-3: replace with docs/images/sim_vs_real.png and/or docs/videos/sim_vs_real.mp4 -->
->
-> **Purpose:** (image) side-by-side frames of the simulated folding and the physical prototype at the same stage, plus one overlay plot of measured vs. simulated displacement/force; (video, optional) a short clip of the simulation and/or the physical prototype performing the same fold — the strongest evidence for the whole design→simulate→deploy loop.
+**Figure 3 — Sim-to-real verification: simulation vs. physical prototype.**
+
+<p align="center">
+  <img src="docs/images/sim_vs_real.jpg" width="95%" alt="Four folding stages: simulation frames on the top row and the physical prototype on the bottom row at the same instants">
+</p>
+
+<p align="center"><em>The same tendon-driven fold at <b>t = 0.0 / 2.0 / 3.6 / 6.23 s</b> — simulated in PyGamiX (top row) and performed by the physical prototype actuated through the planned tendon routing (bottom row). Full clips: <a href="docs/images/video1.mp4">video1.mp4</a> (simulation), <a href="docs/images/video2.mp4">video2.mp4</a> (actuator folding on the ground).</em></p>
 
 ---
 

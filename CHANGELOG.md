@@ -43,7 +43,9 @@ All notable changes to PyGamiX are documented in this file.
 ### Documentation / 文档
 
 - Removed leftover Chinese text from the English README; the language switcher now links to "Chinese".
+- Illustrated both READMEs: two demo GIFs at the top (tendon-driven folding simulation) plus the main-interface screenshot, the Threading Design dialog and a sim-vs-real comparison figure (assets live in `docs/images/`).
 - 移除英文 README 中残留的中文文本，语言切换栏改为 "Chinese"。
+- 为中英文 README 配图：开头新增两个演示 GIF（腱绳驱动折叠仿真），并补入主界面截图、Threading Design 对话框截图与仿真-实物对比图（素材位于 `docs/images/`）。
 
 ---
 

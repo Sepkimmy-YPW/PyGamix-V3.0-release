@@ -8,6 +8,14 @@
 
 📦 本仓库是论文 [*Design and Fabrication of String-driven Origami Robots*（ICRA 2024）](https://arxiv.org/abs/2404.09222) 的配套开源软件。
 
+<p align="center">
+  <img src="docs/images/sim_miura_folding.gif" width="47%" alt="PyGamiX 腱绳驱动折纸面板折叠仿真">
+  &nbsp;&nbsp;
+  <img src="docs/images/sim_actuator_folding.gif" width="47%" alt="PyGamiX 多腱绳折纸驱动器落地折叠仿真">
+</p>
+
+<p align="center"><em>由内置 Taichi 仿真器计算得到的腱绳驱动折叠过程 —— 穿绳路径、折叠运动以及实时的张力 / 腱绳缩短量读数，全部由 PyGamiX 生成，无需实物。</em></p>
+
 ---
 
 ## 为什么选择 PyGamiX？
@@ -56,13 +64,13 @@ python main.py
 >
 > `File ▸ Save result...` / `Ctrl+S` → packed-data JSON（如 `packedImport/your-design.json`）→ `File ▸ Open file...` → 继续编辑。若当前设计是从文件打开的，保存时会直接写回原文件（不弹对话框）。
 
-> **图片占位 1 —— 软件主界面与编辑示例**
->
-> <!-- FIGURE-1: 请替换为 docs/images/gui_overview.png -->
->
-> **图片作用：** 让读者第一眼看到 PyGamiX 的界面布局 —— 中央绘图区的折痕图、右侧含 **Design / Threading Design** 按钮的参数面板，以及某个真实设计（例如带孔的 Waterbomb/Miura 面板）处于编辑/选中状态的示例。建议用带批注的截图。
->
-> 建议路径：`docs/images/gui_overview.png`（宽度约 1280 px）。
+**图 1 —— 软件主界面。**
+
+<p align="center">
+  <img src="docs/images/gui_overview.png" width="85%" alt="PyGamiX 主界面：折痕图、参数面板、Design 与 Threading Design 按钮">
+</p>
+
+<p align="center"><em>主界面：中央绘图区显示带孔与折痕的折痕图，右侧为参数面板（unit width、density、打孔模式、panel offset 等），右下角为 <b>Design</b> 与 <b>Threading Design</b> 两个核心操作按钮。</em></p>
 
 ---
 
@@ -129,11 +137,13 @@ flowchart TD
 7. **仿真评估** —— **Tool ▸ Physical Simulation...** 在当前设计上运行内置仿真器（GGUI 三维交互视图），获取最终折叠百分比/误差、驱动力，以及达成该表现所需的驱动信号（腱绳缩短量-时间曲线）。
 8. **制造与部署** —— 导出图纸/模型（DXF/STL），实际制造结构，按规划方案穿绳并安装驱动器，进行实物验证。用 **Tool ▸ Plot Physical Data**（或 Plot Simulation Data / Plot Evolution Data）叠加对比实验数据与仿真曲线，完成标定与 sim-to-real 校验。
 
-> **图片占位 2 —— Threading Design 参数对话框**
->
-> <!-- FIGURE-2: 请替换为 docs/images/threading_dialog.png -->
->
-> **图片作用：** 参数对话框截图，方便读者把下方参数表中的每一项对应到实际界面控件；如有条件，可再附一张“选中的腱绳路径叠加显示在折痕图上”的结果截图（对应第 5 步）。
+**图 2 —— Threading Design 参数对话框。**
+
+<p align="center">
+  <img src="docs/images/threading_dialog.png" width="55%" alt="Threading Design Settings 对话框：设计信息、仿真属性、搜索算法属性">
+</p>
+
+<p align="center"><em><b>Threading Design Settings</b> 对话框 —— 设计信息（折纸名称）、仿真属性（结构高度、控制模式、地面/摩擦/重力方向、仿真时长、额外腱绳长度、材料类型）与搜索算法属性（最小腱绳数、穿线次数、遮罩折痕类型、搜索模式、EA 约束、工作判据）。每个字段的说明见下方参数表；设置按折纸名称保存，下次运行自动预填。</em></p>
 
 ### Threading Design 对话框 —— 参数说明
 
@@ -193,12 +203,15 @@ flowchart TD
 | `dxfResult/`、`stlResult/` | 导出文件输出目录 |
 | `experiment/` | 实物实验记录数据（CSV/TRK），用于仿真-实物对比绘图 |
 | `curve/` | View 菜单用的三维轨迹/曲线示例文件 |
+| `docs/images/` | README 使用的截图、对比图与演示 GIF |
 
-> **图片/视频占位 3 —— 仿真与实物验证**
->
-> <!-- FIGURE-3: 请替换为 docs/images/sim_vs_real.png 和/或 docs/videos/sim_vs_real.mp4 -->
->
-> **图片作用：**（图）同一折叠阶段下“仿真渲染帧”与“实物样机”的并排对比，外加一张实测 vs 仿真位移/力的叠加曲线 —— 最能体现“设计→仿真→部署”完整闭环的证据。（视频，可选）仿真与实物执行同一折叠过程的短视频。
+**图 3 —— 仿真与实物验证对比。**
+
+<p align="center">
+  <img src="docs/images/sim_vs_real.jpg" width="95%" alt="四个折叠阶段：上排为仿真帧，下排为同一时刻的实物样机">
+</p>
+
+<p align="center"><em>同一次腱绳驱动折叠在 <b>t = 0.0 / 2.0 / 3.6 / 6.23 s</b> 的对比 —— 上排为 PyGamiX 仿真，下排为按规划穿绳方案驱动的实物样机。完整视频：<a href="docs/images/video1.mp4">video1.mp4</a>（仿真）、<a href="docs/images/video2.mp4">video2.mp4</a>（驱动器落地折叠）。</em></p>
 
 ---
 
