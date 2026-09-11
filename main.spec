@@ -2,15 +2,15 @@
 
 
 a = Analysis(
-    ['main.py', 'cdftool.py', 'desc.py', 'designer.py', 'dxftool.py', 'logic.py', 'new_module_dialog.py', 'ori_sim_sys.py', 'phys_sim25.py', 'pref_pack.py', 'stl_dialog.py', 'stltool2.py', 'tm_window.py', 'units.py', 'utils.py', './gui/Ui_new_module.py', './gui/Ui_pref_window.py', './gui/Ui_stl_dialog.py', './gui/Ui_window.py'],
+    ['main.py', 'cdftool.py', 'desc.py', 'designer.py', 'dxftool.py', 'logic.py', 'new_module_dialog.py', 'pref_pack.py', 'stl_dialog.py', 'stltool2.py', 'threading_design_dialog.py', 'tm_window.py', 'units.py', 'utils.py', './gui/Ui_new_module.py', './gui/Ui_pref_window.py', './gui/Ui_stl_dialog.py', './gui/Ui_window.py'],
     pathex=[],
     binaries=[],
-    datas=[],
-    hiddenimports=[],
+    datas=[('phys_sim25.py', '.')],
+    hiddenimports=['taichi', 'taichi.math', 'ori_sim_sys'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['phys_sim25'],
     noarchive=False,
     optimize=0,
 )
@@ -32,6 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='./setting/icon.ico'
 )
 coll = COLLECT(
     exe,

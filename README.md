@@ -2,9 +2,9 @@
 
 **An integrated CAD / CAM / simulation workbench for engineering origami — with automated tendon-threading design for tendon-driven origami structures and robots.**
 
-[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/) [![GUI](https://img.shields.io/badge/GUI-PyQt5-orange)]() [![Simulator](https://img.shields.io/badge/Simulator-Taichi%20CPU-green)]() [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)]() [![License](https://img.shields.io/badge/License-MIT-yellowgreen)](LICENSE) [![Version](https://img.shields.io/badge/Version-3.0.1-blue)](CHANGELOG.md)
+[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/) [![GUI](https://img.shields.io/badge/GUI-PyQt5-orange)]() [![Simulator](https://img.shields.io/badge/Simulator-Taichi%20CPU-green)]() [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)]() [![License](https://img.shields.io/badge/License-MIT-yellowgreen)](LICENSE) [![Version](https://img.shields.io/badge/Version-3.0.2-blue)](CHANGELOG.md)
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [Chinese](README.zh-CN.md)
 
 📦 This is the open-source release accompanying the paper [*Design and Fabrication of String-driven Origami Robots* (ICRA 2024)](https://arxiv.org/abs/2404.09222).
 
@@ -52,7 +52,7 @@ Alternative (existing environment): `pip install -r requirement.txt` — **not**
 3. Or bring your own crease pattern: **File ▸ Import dxf** → click **Design** once the preview is loaded.
 4. **Save your design and resume later:** once you are happy with a design, use **File ▸ Save result...** (or press **Ctrl+S**) to pack the *entire* current design — all origami modules, unit biases, hole/crease settings, tendon routing, connection candidates, crease angles — into a single packed-data JSON file. Reload it anytime with **File ▸ Open file...** to continue right where you left off, instead of re-importing a DXF/KL file and repeating every edit. Tip: store your own designs in `packedImport/` next to the bundled examples to keep them organized.
 
-> **Save & resume workflow 保存并恢复工作流**
+> **Save & resume workflow**
 >
 > `File ▸ Save result...` / `Ctrl+S` → packed-data JSON (`packedImport/your-design.json`) → `File ▸ Open file...` → continue editing. Designs opened from a file are saved back to the same file silently.
 
@@ -93,7 +93,7 @@ flowchart TD
 | `utils.py`, `units.py` | Core data model: `Vertex`/`Crease` geometry, origami units (Miura, Lean-Miura), crease-pattern graph & unit parsers |
 | `desc.py`, `designer.py` | Design-description representation & construction |
 | `dxftool.py`, `stltool2.py` | DXF / Split-DXF / STL output for manufacturing |
-| `phys_sim25.py`, `ori_sim_sys.py` | Self-developed Taichi physics simulator |
+| `phys_sim25.py`, `ori_sim_sys.py`, `spatialhash.py` | Self-developed Taichi physics simulator (with a spatial-hash index for fast key-point lookup) |
 | `trainer.py`, `threading_design_dialog.py` | Tendon-threading strategy search & its settings dialog |
 | `cdftool.py` | Computational-design utilities (transition-angle/curve fitting, evolutionary & tree search helpers) |
 | `plotkit.py`, `tm_window.py`, `pref_pack.py` | Plotting, visualization and preference windows |
@@ -230,4 +230,4 @@ Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the full version history (current release: **v3.0.1** — bidirectional tendon-friction simulator, threading-design presets, live threading-search progress bar, and a ~340× faster STL export).
+See [CHANGELOG.md](CHANGELOG.md) for the full version history (current release: **v3.0.2** — missing `spatialhash.py` module added, curated description-data examples with new Miura-EA designs, and an updated PyInstaller packaging configuration; v3.0.1 added threading-design presets, live threading-search progress bar, and a ~340× faster STL export).

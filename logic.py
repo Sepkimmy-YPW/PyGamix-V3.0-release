@@ -4809,12 +4809,8 @@ class Mainwindow(Ui_MainWindow, QMainWindow):
         ori_sim.window.destroy()
 
     def physicalSimulationPD(self):
-        from phys_sim_pd14 import PD_Origami_Simulator as OrigamiSimulator
-        self.exportDescriptionData('./descriptionData/phys_sim.json')
-        ori_sim = OrigamiSimulator("phys_sim", use_gui=True, fast=self.pref_pack["fast_simulation_mode"])
-        ori_sim.start("phys_sim", 4)
-        ori_sim.run()
-        ori_sim.window.destroy()
+        QMessageBox.information(self, "Projective Dynamics simulation", "This feature is not available in the current release and will be available in a future version.")
+        return
 
     def plotJsonReadFile(self):
         path, _ = QFileDialog.getOpenFileName(

@@ -2,7 +2,7 @@
 
 **面向工程折纸的一体化 CAD / CAM / 仿真软件平台 —— 并支持绳驱折纸结构与机器人的腱绳穿线（Threading）方案自动规划。**
 
-[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/) [![GUI](https://img.shields.io/badge/GUI-PyQt5-orange)]() [![仿真器](https://img.shields.io/badge/Simulator-Taichi%20CPU-green)]() [![平台](https://img.shields.io/badge/Platform-Windows-lightgrey)]() [![许可证](https://img.shields.io/badge/License-MIT-yellowgreen)](LICENSE) [![版本](https://img.shields.io/badge/Version-3.0.1-blue)](CHANGELOG.md)
+[![Python](https://img.shields.io/badge/Python-3.9-blue)](https://www.python.org/) [![GUI](https://img.shields.io/badge/GUI-PyQt5-orange)]() [![仿真器](https://img.shields.io/badge/Simulator-Taichi%20CPU-green)]() [![平台](https://img.shields.io/badge/Platform-Windows-lightgrey)]() [![许可证](https://img.shields.io/badge/License-MIT-yellowgreen)](LICENSE) [![版本](https://img.shields.io/badge/Version-3.0.2-blue)](CHANGELOG.md)
 
 [English](README.md) | **简体中文**
 
@@ -93,7 +93,7 @@ flowchart TD
 | `utils.py`、`units.py` | 核心数据模型：`Vertex`/`Crease` 几何、折纸单元（Miura、Lean-Miura）、折痕图树状结构与单元解析器 |
 | `desc.py`、`designer.py` | 设计描述（description）的表示与构建 |
 | `dxftool.py`、`stltool2.py` | 面向制造的 DXF / Split-DXF / STL 输出 |
-| `phys_sim25.py`、`ori_sim_sys.py` | 自研 Taichi 物理仿真器 |
+| `phys_sim25.py`、`ori_sim_sys.py`、`spatialhash.py` | 自研 Taichi 物理仿真器（含关键点快速邻域查找的空间哈希索引） |
 | `trainer.py`、`threading_design_dialog.py` | 穿线方案搜索与参数设置对话框 |
 | `cdftool.py` | 计算设计工具（过渡角/曲线拟合、进化与树搜索辅助） |
 | `plotkit.py`、`tm_window.py`、`pref_pack.py` | 绘图、可视化与偏好设置窗口 |
@@ -230,4 +230,4 @@ flowchart TD
 
 ## 更新日志
 
-完整版本历史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v3.0.1**：新增双向腱绳摩擦仿真器、穿线设计参数预设、穿线搜索实时进度条，STL 导出提速约 340 倍。
+完整版本历史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v3.0.2**：补齐缺失的 `spatialhash.py` 模块、整理系统描述示例并新增 Miura-EA 设计、更新 PyInstaller 打包配置；v3.0.1 新增了穿线设计参数预设、穿线搜索实时进度条，STL 导出提速约 340 倍。

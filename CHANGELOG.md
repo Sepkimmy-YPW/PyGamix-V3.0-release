@@ -5,28 +5,66 @@ All notable changes to PyGamiX are documented in this file.
 
 ---
 
+## [3.0.2] — 2026-09-11
+
+### Added / 新增
+
+**English**
+
+- **`spatialhash.py`**: spatial-hash utility for fast 3D key-point neighborhood lookup (used by `ori_sim_sys.py`). It was referenced by the code but previously missing from the repository — a fresh clone crashed with `ImportError` on startup; this release fixes that.
+- **Miura-EA system-description examples**: `descriptionData/f-miura-EA.json` and `descriptionData/miura-EA.json`, matching the `miura-EA` configuration shipped in `trainer.py` / `phys_sim25.py`.
+- **Complete tendon-routing data in the `bird4` example**: `descriptionData/bird4.json` now ships its full `strings` section (per-tendon type/id/reverse sequences) and `trans_units`, so the example can be simulated end-to-end as-is.
+
+**中文**
+
+- **`spatialhash.py`**：用于 3D 关键点快速邻域查找的空间哈希工具类（`ori_sim_sys.py` 使用）。此前代码已引用该模块但仓库中缺失——fresh clone 启动即报 `ImportError`，本次发布修复该问题。
+- **Miura-EA 系统描述示例**：`descriptionData/f-miura-EA.json` 与 `descriptionData/miura-EA.json`，与 `trainer.py` / `phys_sim25.py` 中的 `miura-EA` 配套配置对应。
+- **`bird4` 示例补全腱绳路径数据**：`descriptionData/bird4.json` 现包含完整 `strings` 段（每根腱绳的 type/id/reverse 序列）及 `trans_units`，示例可即开即仿真。
+
+### Changed / 变更
+
+**English**
+
+- **Curated `descriptionData/`**: removed 23 experimental system-description files, keeping the documented example set; bundled examples now cover the Miura / Resch / robot-arm / box families plus the new Miura-EA designs.
+- **`main.spec` (PyInstaller) updated**: `threading_design_dialog.py` is now analyzed; `phys_sim25.py` is shipped as data (so the simulator runs with Taichi intact), `taichi` / `taichi.math` / `ori_sim_sys` added as hidden imports, simulator modules excluded from analysis, and the application icon (`./setting/icon.ico`) restored.
+- **Explicit Simulation menu action disabled with a notice**: since the Projective Dynamics simulator (`phys_sim_pd14.py`) is not part of this release, *Simulation → Explicit Simulation* now shows an "available in a future version" dialog instead of crashing with `ModuleNotFoundError`.
+
+**中文**
+
+- **整理 `descriptionData/`**：移除 23 个实验性系统描述文件，保留文档化的示例集；内置示例现覆盖 Miura / Resch / 机械臂 / 盒族折纸以及新增的 Miura-EA 设计。
+- **更新 `main.spec`（PyInstaller 打包配置）**：`threading_design_dialog.py` 纳入分析；`phys_sim25.py` 以数据文件方式携带（保证仿真器在打包后 Taichi 正常运行）；`taichi` / `taichi.math` / `ori_sim_sys` 加入 hidden imports；仿真模块从分析中排除；恢复应用程序图标（`./setting/icon.ico`）。
+- **Explicit Simulation 菜单禁用并弹出提示**：由于 Projective Dynamics 仿真器（`phys_sim_pd14.py`）未随本版本发布，菜单 *Simulation → Explicit Simulation* 现在弹出「将于未来版本提供」的提示框，不再因 `ModuleNotFoundError` 崩溃。
+
+### Removed / 移除
+
+- `packedImport/mountain-big-fix-thick.json` (superseded by other bundled examples).
+- 移除 `packedImport/mountain-big-fix-thick.json`（已被其他内置示例取代）。
+
+### Documentation / 文档
+
+- Removed leftover Chinese text from the English README; the language switcher now links to "Chinese".
+- 移除英文 README 中残留的中文文本，语言切换栏改为 "Chinese"。
+
+---
+
 ## [3.0.1] — 2026-09-09
 
 ### Added / 新增
 
 **English**
 
-- **Bidirectional tendon-friction simulator** (`phys_sim25_double_friction.py`): a new simulator variant that models tension loss along *both* directions of the tendon — per-hole friction attenuation factors between adjacent tendon segments, with cross-substep per-segment tension feedback and slack handling (tension clamped to ~1e-6, segments zeroed when slack).
 - **Threading-design presets**: the Threading Design dialog now saves its settings to `./setting/threading_design/<origami_name>.json` on confirm, and pre-fills the origami name plus every field from the saved preset on the next run — no re-entering from scratch.
 - **Auto-loading of description data**: after feature extraction (or when reusing an existing description file), the generated `descriptionData/<name>.json` is now automatically loaded into the main window, so the simulation view is ready without manual re-import.
 - **Live progress bar for threading search**: trainer log lines tagged `[TRAINER]` are parsed by the GUI in real time — the status bar shows search progress and the progress bar tracks the search (cut/step ratio), completing at 100% when the search finishes.
 - **Per-unit crease export with progress feedback**: the crease-layer generation step of STL export now emits progress per unit (`calculateTriPlaneForSingleCrease` / `outputCreaseDxf`), filling the former 40%–50% "blind zone" where the progress bar froze.
-- **Projective Dynamics simulator entry point**: the *Simulation → Explicit Simulation* menu action now launches the PD-based simulator (`phys_sim_pd14.PD_Origami_Simulator`) with GGUI, instead of being a disabled placeholder.
 - **`miura-EA` example configuration** in `trainer.py` and `phys_sim25.py` (EA system with −Z gravity).
 
 **中文**
 
-- **双向腱绳摩擦仿真器**（`phys_sim25_double_friction.py`）：新增仿真器变体，可建模腱绳**双向**的张力损失——相邻绳段之间按孔位计算摩擦衰减因子，跨子步保存每段张力作为反馈通道，并在绳松弛时将张力钳制到 ~1e-6、清零各段存储。
 - **穿线设计参数预设**：穿线设计对话框确认后自动保存设置到 `./setting/threading_design/<origami_name>.json`；再次运行时自动预填折纸名称与全部参数字段，无需从头输入。
 - **描述数据自动载入**：特征提取完成后（或复用已有描述文件时），生成的 `descriptionData/<name>.json` 会自动加载进主窗口，无需手动重新导入即可查看仿真。
 - **穿线搜索实时进度条**：GUI 实时解析 trainer 输出的 `[TRAINER]` 日志——状态栏显示搜索进度，进度条按剪枝/步数比例推进，搜索结束时归位 100%。
 - **折痕层逐单元导出进度**：STL 导出中的折痕层生成改为逐单元计算并逐步上报进度（`calculateTriPlaneForSingleCrease` / `outputCreaseDxf`），消除了原先 40%–50% 区间进度条冻结的"盲区"。
-- **Projective Dynamics 仿真入口**：菜单 *Simulation → Explicit Simulation* 现在启动基于 PD 的仿真器（`phys_sim_pd14.PD_Origami_Simulator`，GGUI 窗口），不再是占位空函数。
 - 在 `trainer.py` 与 `phys_sim25.py` 中新增 **`miura-EA` 示例配置**（带 −Z 重力的 EA 系统）。
 
 ### Performance / 性能
